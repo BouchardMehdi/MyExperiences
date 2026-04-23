@@ -14,3 +14,18 @@ export function formatBookingStatus(status) {
       return status || 'Inconnu';
   }
 }
+
+/**
+ * @param {string | null | undefined} status
+ * @returns {string}
+ */
+export function formatPaymentStatus(status) {
+  switch (status) {
+    case 'SUCCESS':
+      return 'Succes';
+    case 'FAILED':
+      return 'Echec';
+    default:
+      return status || 'Aucun paiement';
+  }
+}

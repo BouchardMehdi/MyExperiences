@@ -18,6 +18,7 @@ Le backend `back/` est maintenant fige sur une base API-first.
   - `GET /api/bookings`
   - `POST /api/bookings`
   - `POST /api/bookings/{id}/cancel`
+  - `POST /api/bookings/{id}/pay`
 
 ## Briques conservees pour la suite
 
@@ -44,3 +45,4 @@ Le backend `back/` est maintenant fige sur une base API-first.
 - l'API experiences publique accepte les filtres `location`, `maxPrice` et `date`
 - l'authentification API utilise des jetons Bearer persistants stockes dans `api_token`
 - les reservations sont protegees par l'auth Bearer et gerees en transaction Doctrine
+- le paiement mock est expose sur les reservations avec simulation `success` ou `failure`

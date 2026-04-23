@@ -44,9 +44,12 @@ class BookingRepository extends ServiceEntityRepository
             ->addSelect('s')
             ->join('s.experience', 'e')
             ->addSelect('e')
+            ->leftJoin('b.payments', 'p')
+            ->addSelect('p')
             ->where('b.user = :user')
             ->setParameter('user', $user)
             ->orderBy('b.createdAt', 'DESC')
+            ->addOrderBy('p.createdAt', 'DESC')
             ->getQuery()
             ->getResult();
     }

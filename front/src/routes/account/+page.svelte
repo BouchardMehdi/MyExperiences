@@ -3,8 +3,8 @@
   import { base } from '$app/paths';
   import { onMount } from 'svelte';
   import { authSession, clearAuthSession, getStoredAuthToken, updateAuthUser } from '$lib/auth/session';
-  import { cancelBooking, fetchCurrentUser, fetchMyBookings } from '$lib/api/client';
-  import { formatBookingStatus } from '$lib/utils/booking';
+  import { cancelBooking, fetchCurrentUser, fetchMyBookings, payBooking } from '$lib/api/client';
+  import { formatBookingStatus, formatPaymentStatus } from '$lib/utils/booking';
   import { formatDateTime, formatPrice } from '$lib/utils/experience';
 
   let error = '';
@@ -14,8 +14,11 @@
   /** @type {Array<Record<string, any>>} */
   let bookings = [];
   let bookingsError = '';
+  let bookingsFeedback = '';
   /** @type {number | null} */
   let cancellingBookingId = null;
+  /** @type {number | null} */
+  let payingBookingId = null;
 
   onMount(async () => {
     const token = getStoredAuthToken();
@@ -63,6 +66,7 @@
 
     cancellingBookingId = bookingId;
     bookingsError = '';
+    bookingsFeedback = '';
 
     try {
       const response = await cancelBooking(token, bookingId);
@@ -73,10 +77,47 @@
       }
 
       bookings = bookings.map((booking) => (booking.id === bookingId ? updatedBooking : booking));
+      bookingsFeedback = 'La reservation a bien ete annulee.';
     } catch (exception) {
       bookingsError = exception instanceof Error ? exception.message : 'Erreur inconnue.';
     } finally {
       cancellingBookingId = null;
+    }
+  }
+
+  /**
+   * @param {number} bookingId
+   * @param {'success' | 'failure'} outcome
+   */
+  async function handlePayBooking(bookingId, outcome) {
+    const token = getStoredAuthToken();
+
+    if (!token) {
+      await goto(`${base}/login`);
+      return;
+    }
+
+    payingBookingId = bookingId;
+    bookingsError = '';
+    bookingsFeedback = '';
+
+    try {
+      const response = await payBooking(token, bookingId, outcome);
+      const updatedBooking = response.data && typeof response.data === 'object' ? response.data : null;
+
+      if (!updatedBooking) {
+        throw new Error('La reponse de paiement est incomplete.');
+      }
+
+      bookings = bookings.map((booking) => (booking.id === bookingId ? updatedBooking : booking));
+      bookingsFeedback =
+        outcome === 'failure'
+          ? 'Le paiement mock a echoue et la reservation a ete annulee.'
+          : 'Le paiement mock a ete valide avec succes.';
+    } catch (exception) {
+      bookingsError = exception instanceof Error ? exception.message : 'Erreur inconnue.';
+    } finally {
+      payingBookingId = null;
     }
   }
 </script>
@@ -131,6 +172,10 @@
           <p class="inline-error">{bookingsError}</p>
         {/if}
 
+        {#if bookingsFeedback}
+          <p class="inline-success">{bookingsFeedback}</p>
+        {/if}
+
         {#if bookings.length}
           <div class="booking-list">
             {#each bookings as booking (booking.id)}
@@ -160,14 +205,42 @@
                   </div>
                   <div>
                     <dt>Statut paiement</dt>
-                    <dd>{booking.latestPayment?.status || 'Aucun paiement'}</dd>
+                    <dd>{formatPaymentStatus(booking.latestPayment?.status)}</dd>
                   </div>
                 </dl>
+
+                {#if booking.latestPayment}
+                  <p class="payment-details">
+                    Ref {booking.latestPayment.transactionRef || 'mock'} · {booking.latestPayment.provider || 'mock'} · {formatPrice(booking.latestPayment.amount)}
+                  </p>
+                {/if}
+
+                {#if booking.canPay}
+                  <div class="action-row">
+                    <button
+                      class="primary-action"
+                      disabled={payingBookingId === booking.id || cancellingBookingId === booking.id}
+                      on:click={() => handlePayBooking(booking.id, 'success')}
+                      type="button"
+                    >
+                      {payingBookingId === booking.id ? 'Traitement...' : 'Payer (mock)'}
+                    </button>
+
+                    <button
+                      class="secondary ghost"
+                      disabled={payingBookingId === booking.id || cancellingBookingId === booking.id}
+                      on:click={() => handlePayBooking(booking.id, 'failure')}
+                      type="button"
+                    >
+                      Simuler un echec
+                    </button>
+                  </div>
+                {/if}
 
                 {#if booking.canCancel}
                   <button
                     class="secondary"
-                    disabled={cancellingBookingId === booking.id}
+                    disabled={cancellingBookingId === booking.id || payingBookingId === booking.id}
                     on:click={() => handleCancelBooking(booking.id)}
                     type="button"
                   >
@@ -320,12 +393,47 @@
     cursor: pointer;
   }
 
-  .secondary:disabled {
+  .primary-action {
+    min-height: 2.8rem;
+    padding: 0.75rem 1rem;
+    border: 0;
+    border-radius: 999px;
+    background: #8d5430;
+    color: #fff9f1;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .action-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 0.9rem;
+  }
+
+  .ghost {
+    background: rgba(255, 244, 241, 0.92);
+    color: #8a473f;
+  }
+
+  .secondary:disabled,
+  .primary-action:disabled {
     opacity: 0.7;
     cursor: wait;
   }
 
+  .payment-details {
+    margin-top: 0.9rem;
+    padding: 0.85rem 1rem;
+    border-radius: 1rem;
+    background: rgba(255, 255, 255, 0.86);
+    border: 1px solid rgba(143, 108, 82, 0.12);
+    color: #6d5341;
+  }
+
   .inline-error,
+  .inline-success,
   .status-panel.error {
     color: #9c2f20;
     border-color: rgba(156, 47, 32, 0.16);
@@ -337,6 +445,13 @@
     padding: 0.9rem 1rem;
     border-radius: 1rem;
     border: 1px solid rgba(156, 47, 32, 0.16);
+  }
+
+  .inline-success {
+    margin: 1rem 0 0;
+    color: #1f7e5c;
+    border-color: rgba(31, 126, 92, 0.16);
+    background: rgba(234, 247, 239, 0.92);
   }
 
   .empty {

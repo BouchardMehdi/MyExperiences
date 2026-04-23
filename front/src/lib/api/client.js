@@ -188,3 +188,20 @@ export async function cancelBooking(token, bookingId) {
     headers: createAuthHeaders(token)
   });
 }
+
+/**
+ * @param {string} token
+ * @param {number | string} bookingId
+ * @param {'success' | 'failure'} outcome
+ * @returns {Promise<ApiPayload>}
+ */
+export async function payBooking(token, bookingId, outcome = 'success') {
+  return apiFetch(`/bookings/${bookingId}/pay`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...createAuthHeaders(token)
+    },
+    body: JSON.stringify({ outcome })
+  });
+}

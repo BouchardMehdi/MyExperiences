@@ -47,6 +47,7 @@ Le backend Symfony est organise dans `back/` et expose actuellement :
 - `GET /api/bookings`
 - `POST /api/bookings`
 - `POST /api/bookings/{id}/cancel`
+- `POST /api/bookings/{id}/pay`
 
 La base Doctrine/PostgreSQL est prete pour evoluer avec migrations et logique metier. La couche web Twig obsolete a ete retiree pour garder un backend API-first plus propre.
 

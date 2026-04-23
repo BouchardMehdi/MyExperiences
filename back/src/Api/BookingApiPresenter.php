@@ -49,7 +49,13 @@ class BookingApiPresenter
             ],
             'latestPayment' => null === $latestPayment ? null : [
                 'id' => $latestPayment->getId(),
+                'amount' => [
+                    'amount' => $latestPayment->getAmount(),
+                    'currency' => 'EUR',
+                ],
+                'provider' => $latestPayment->getProvider(),
                 'status' => $latestPayment->getStatus()->value,
+                'transactionRef' => $latestPayment->getTransactionRef(),
                 'createdAt' => $latestPayment->getCreatedAt()->format(\DateTimeInterface::ATOM),
             ],
         ];

@@ -4,11 +4,13 @@ namespace App\Controller\Api;
 
 use App\Api\BookingApiPresenter;
 use App\Dto\Booking\CreateBookingInput;
+use App\Dto\Payment\ProcessPaymentInput;
 use App\Entity\User;
 use App\Repository\BookingRepository;
 use App\Repository\SlotRepository;
 use App\Security\BookingVoter;
 use App\Service\BookingService;
+use App\Service\PaymentService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -148,6 +150,76 @@ class BookingController extends AbstractController
         ]);
     }
 
+    #[Route('/{id<\d+>}/pay', name: 'pay', methods: ['POST'])]
+    public function pay(
+        int $id,
+        Request $request,
+        ValidatorInterface $validator,
+        BookingRepository $bookingRepository,
+        PaymentService $paymentService,
+        EntityManagerInterface $entityManager,
+        BookingApiPresenter $bookingApiPresenter,
+    ): JsonResponse {
+        $user = $this->getAuthenticatedUser();
+        if ($user instanceof JsonResponse) {
+            return $user;
+        }
+
+        $booking = $bookingRepository->findDetailedByIdForUser($id, $user);
+        if (!$booking) {
+            return $this->json([
+                'error' => [
+                    'code' => 'booking_not_found',
+                    'message' => 'Booking not found.',
+                ],
+            ], Response::HTTP_NOT_FOUND);
+        }
+
+        $this->denyAccessUnlessGranted(BookingVoter::PAY, $booking);
+
+        $payload = $this->decodeRequestBody($request);
+        if ($payload instanceof JsonResponse) {
+            return $payload;
+        }
+
+        $input = new ProcessPaymentInput();
+        $input->outcome = $this->normalizeString($payload['outcome'] ?? null, 'success');
+
+        $fieldErrors = $this->collectValidationErrors($validator->validate($input));
+        if ([] !== $fieldErrors) {
+            return $this->json([
+                'error' => [
+                    'code' => 'validation_failed',
+                    'message' => 'The submitted data is invalid.',
+                    'fields' => $fieldErrors,
+                ],
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        try {
+            if ('failure' === $input->outcome) {
+                $paymentService->simulateFailure($booking);
+            } else {
+                $paymentService->simulateSuccess($booking);
+            }
+
+            $entityManager->flush();
+        } catch (\DomainException $exception) {
+            return $this->json([
+                'error' => [
+                    'code' => 'payment_conflict',
+                    'message' => $exception->getMessage(),
+                ],
+            ], Response::HTTP_CONFLICT);
+        }
+
+        $booking = $bookingRepository->findDetailedByIdForUser($id, $user) ?? $booking;
+
+        return $this->json([
+            'data' => $bookingApiPresenter->present($booking),
+        ]);
+    }
+
     /**
      * @return User|JsonResponse
      */
@@ -220,6 +292,17 @@ class BookingController extends AbstractController
 
         if (is_string($value) && is_numeric($value)) {
             return (int) $value;
+        }
+
+        return $default;
+    }
+
+    private function normalizeString(mixed $value, string $default = ''): string
+    {
+        if (is_string($value)) {
+            $normalized = trim($value);
+
+            return '' !== $normalized ? $normalized : $default;
         }
 
         return $default;
