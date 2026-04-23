@@ -3,9 +3,12 @@
 namespace App\Controller\Api;
 
 use App\Api\ExperienceApiPresenter;
+use App\Entity\Experience;
+use App\Entity\User;
 use App\Repository\ExperienceRepository;
 use App\Repository\ReviewRepository;
 use App\Repository\SlotRepository;
+use App\Service\ReviewEligibilityService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -51,6 +54,7 @@ class ExperienceController extends AbstractController
         ExperienceRepository $experienceRepository,
         SlotRepository $slotRepository,
         ReviewRepository $reviewRepository,
+        ReviewEligibilityService $reviewEligibilityService,
         ExperienceApiPresenter $experienceApiPresenter,
     ): JsonResponse {
         $experience = $experienceRepository->findPublishedById($id);
@@ -66,10 +70,64 @@ class ExperienceController extends AbstractController
 
         $bookableSlots = $slotRepository->findBookableForExperience($experience);
         $latestReviews = $reviewRepository->findLatestForExperience($experience);
+        $reviewPolicy = $this->buildReviewPolicy(
+            $this->getUser(),
+            $experience,
+            $reviewRepository,
+            $reviewEligibilityService,
+            $experienceApiPresenter,
+        );
 
         return $this->json([
-            'data' => $experienceApiPresenter->presentDetail($experience, $bookableSlots, $latestReviews),
+            'data' => $experienceApiPresenter->presentDetail($experience, $bookableSlots, $latestReviews, $reviewPolicy),
         ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function buildReviewPolicy(
+        mixed $user,
+        Experience $experience,
+        ReviewRepository $reviewRepository,
+        ReviewEligibilityService $reviewEligibilityService,
+        ExperienceApiPresenter $experienceApiPresenter,
+    ): array {
+        if (!$user instanceof User) {
+            return [
+                'isAuthenticated' => false,
+                'canCreate' => false,
+                'status' => 'anonymous',
+                'userReview' => null,
+            ];
+        }
+
+        $userReview = $reviewRepository->findOneForUserAndExperience($user, $experience);
+
+        if ($userReview) {
+            return [
+                'isAuthenticated' => true,
+                'canCreate' => false,
+                'status' => 'already_reviewed',
+                'userReview' => $experienceApiPresenter->presentReview($userReview),
+            ];
+        }
+
+        if ($reviewEligibilityService->canReview($user, $experience)) {
+            return [
+                'isAuthenticated' => true,
+                'canCreate' => true,
+                'status' => 'can_review',
+                'userReview' => null,
+            ];
+        }
+
+        return [
+            'isAuthenticated' => true,
+            'canCreate' => false,
+            'status' => 'not_eligible',
+            'userReview' => null,
+        ];
     }
 
     /**

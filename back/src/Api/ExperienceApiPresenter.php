@@ -20,9 +20,15 @@ class ExperienceApiPresenter
     /**
      * @param list<Slot> $bookableSlots
      * @param list<Review> $latestReviews
+     * @param array<string, mixed>|null $reviewPolicy
      * @return array<string, mixed>
      */
-    public function presentDetail(Experience $experience, array $bookableSlots, array $latestReviews = []): array
+    public function presentDetail(
+        Experience $experience,
+        array $bookableSlots,
+        array $latestReviews = [],
+        ?array $reviewPolicy = null,
+    ): array
     {
         return [
             'id' => $experience->getId(),
@@ -43,6 +49,12 @@ class ExperienceApiPresenter
             'reviewSummary' => [
                 'averageRating' => $experience->getAverageRating(),
                 'count' => $experience->getReviews()->count(),
+            ],
+            'reviewPolicy' => $reviewPolicy ?? [
+                'isAuthenticated' => false,
+                'canCreate' => false,
+                'status' => 'anonymous',
+                'userReview' => null,
             ],
         ];
     }
@@ -109,7 +121,7 @@ class ExperienceApiPresenter
     /**
      * @return array<string, mixed>
      */
-    private function presentReview(Review $review): array
+    public function presentReview(Review $review): array
     {
         return [
             'id' => $review->getId(),

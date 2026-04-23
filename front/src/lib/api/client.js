@@ -99,7 +99,12 @@ export async function fetchExperiences(filters = {}) {
  * @returns {Promise<ApiPayload>}
  */
 export async function fetchExperienceById(id) {
-  return apiFetch(`/experiences/${id}`);
+  const token =
+    typeof window !== 'undefined' ? window.localStorage.getItem('myexperiences.auth.token') : null;
+
+  return apiFetch(`/experiences/${id}`, {
+    headers: createAuthHeaders(token)
+  });
 }
 
 /**
@@ -203,5 +208,22 @@ export async function payBooking(token, bookingId, outcome = 'success') {
       ...createAuthHeaders(token)
     },
     body: JSON.stringify({ outcome })
+  });
+}
+
+/**
+ * @param {string} token
+ * @param {number | string} experienceId
+ * @param {{ rating: number | string; comment: string }} payload
+ * @returns {Promise<ApiPayload>}
+ */
+export async function createReview(token, experienceId, payload) {
+  return apiFetch(`/experiences/${experienceId}/reviews`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...createAuthHeaders(token)
+    },
+    body: JSON.stringify(payload)
   });
 }

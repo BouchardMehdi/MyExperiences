@@ -4,7 +4,7 @@
   import { browser } from '$app/environment';
   import { page } from '$app/stores';
   import { authSession, getStoredAuthToken } from '$lib/auth/session';
-  import { createBooking, fetchExperienceById } from '$lib/api/client';
+  import { createBooking, createReview, fetchExperienceById } from '$lib/api/client';
   import { formatDateTime, formatDuration, formatPrice } from '$lib/utils/experience';
 
   /** @type {any} */
@@ -18,6 +18,11 @@
   let bookingError = '';
   let bookingSuccess = '';
   let isSubmittingBooking = false;
+  let reviewRating = 5;
+  let reviewComment = '';
+  let reviewError = '';
+  let reviewSuccess = '';
+  let isSubmittingReview = false;
 
   $: experienceId = $page.params.id ?? '';
   $: authenticatedUser = /** @type {Record<string, any> | null} */ ($authSession.user);
@@ -36,6 +41,8 @@
     experience = null;
     bookingError = '';
     bookingSuccess = '';
+    reviewError = '';
+    reviewSuccess = '';
 
     try {
       const response = await fetchExperienceById(id);
@@ -78,6 +85,35 @@
       bookingError = exception instanceof Error ? exception.message : 'Erreur inconnue.';
     } finally {
       isSubmittingBooking = false;
+    }
+  }
+
+  async function submitReview() {
+    const token = getStoredAuthToken();
+
+    if (!token) {
+      await goto(`${base}/login`);
+      return;
+    }
+
+    isSubmittingReview = true;
+    reviewError = '';
+    reviewSuccess = '';
+
+    try {
+      await createReview(token, experienceId, {
+        rating: reviewRating,
+        comment: reviewComment
+      });
+
+      reviewComment = '';
+      reviewRating = 5;
+      await loadExperience(experienceId);
+      reviewSuccess = 'Votre avis a bien ete publie.';
+    } catch (exception) {
+      reviewError = exception instanceof Error ? exception.message : 'Erreur inconnue.';
+    } finally {
+      isSubmittingReview = false;
     }
   }
 </script>
@@ -205,6 +241,45 @@
         <h2>Derniers retours</h2>
       </div>
 
+      {#if reviewSuccess}
+        <p class="inline-success">{reviewSuccess}</p>
+      {/if}
+
+      {#if experience.reviewPolicy?.isAuthenticated}
+        {#if experience.reviewPolicy?.canCreate}
+          <form class="review-form" on:submit|preventDefault={submitReview}>
+            <label>
+              <span>Note</span>
+              <select bind:value={reviewRating}>
+                <option value={5}>5/5</option>
+                <option value={4}>4/5</option>
+                <option value={3}>3/5</option>
+                <option value={2}>2/5</option>
+                <option value={1}>1/5</option>
+              </select>
+            </label>
+
+            <label>
+              <span>Commentaire</span>
+              <textarea bind:value={reviewComment} minlength="10" rows="4"></textarea>
+            </label>
+
+            {#if reviewError}
+              <p class="inline-error">{reviewError}</p>
+            {/if}
+            <button class="primary-link" disabled={isSubmittingReview} type="submit">
+              {isSubmittingReview ? 'Publication...' : 'Publier mon avis'}
+            </button>
+          </form>
+        {:else if experience.reviewPolicy?.status === 'already_reviewed'}
+          <p class="empty">Vous avez deja laisse un avis pour cette experience.</p>
+        {:else}
+          <p class="empty">Vous pourrez laisser un avis apres avoir participe a cette experience.</p>
+        {/if}
+      {:else}
+        <p class="empty">Connectez-vous pour laisser un avis apres votre participation.</p>
+      {/if}
+
       {#if experience.reviews?.length}
         <div class="review-list">
           {#each experience.reviews as review (review.id)}
@@ -327,12 +402,31 @@
     margin-top: 1rem;
   }
 
+  .review-form {
+    display: grid;
+    gap: 0.8rem;
+    margin-bottom: 1rem;
+  }
+
   .booking-form label {
     display: grid;
     gap: 0.4rem;
   }
 
+  .review-form label {
+    display: grid;
+    gap: 0.4rem;
+  }
+
   .booking-form span {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #866854;
+    font-weight: 700;
+  }
+
+  .review-form span {
     font-size: 0.8rem;
     text-transform: uppercase;
     letter-spacing: 0.08em;
@@ -349,6 +443,22 @@
     background: #fffdf9;
     color: #291d16;
     font: inherit;
+  }
+
+  .review-form select,
+  .review-form textarea {
+    min-height: 3rem;
+    padding: 0.8rem 1rem;
+    border-radius: 1rem;
+    border: 1px solid rgba(143, 108, 82, 0.22);
+    background: #fffdf9;
+    color: #291d16;
+    font: inherit;
+  }
+
+  .review-form textarea {
+    min-height: 7rem;
+    resize: vertical;
   }
 
   .primary-link {

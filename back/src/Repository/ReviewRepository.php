@@ -4,6 +4,7 @@ namespace App\Repository;
 
 use App\Entity\Experience;
 use App\Entity\Review;
+use App\Entity\User;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -31,5 +32,18 @@ class ReviewRepository extends ServiceEntityRepository
             ->setMaxResults($limit)
             ->getQuery()
             ->getResult();
+    }
+
+    public function findOneForUserAndExperience(User $user, Experience $experience): ?Review
+    {
+        return $this->createQueryBuilder('r')
+            ->join('r.user', 'u')
+            ->addSelect('u')
+            ->where('r.user = :user')
+            ->andWhere('r.experience = :experience')
+            ->setParameter('user', $user)
+            ->setParameter('experience', $experience)
+            ->getQuery()
+            ->getOneOrNullResult();
     }
 }

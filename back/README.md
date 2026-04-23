@@ -11,6 +11,7 @@ Le backend `back/` est maintenant fige sur une base API-first.
   - `GET /api/hello`
   - `GET /api/experiences`
   - `GET /api/experiences/{id}`
+  - `POST /api/experiences/{id}/reviews`
   - `POST /api/auth/register`
   - `POST /api/auth/login`
   - `POST /api/auth/logout`
@@ -46,3 +47,4 @@ Le backend `back/` est maintenant fige sur une base API-first.
 - l'authentification API utilise des jetons Bearer persistants stockes dans `api_token`
 - les reservations sont protegees par l'auth Bearer et gerees en transaction Doctrine
 - le paiement mock est expose sur les reservations avec simulation `success` ou `failure`
+- les avis sont limites a un par utilisateur et ne sont autorises qu'apres participation payee

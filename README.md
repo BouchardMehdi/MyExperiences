@@ -40,6 +40,7 @@ Le backend Symfony est organise dans `back/` et expose actuellement :
 - `GET /api/hello`
 - `GET /api/experiences`
 - `GET /api/experiences/{id}`
+- `POST /api/experiences/{id}/reviews`
 - `POST /api/auth/register`
 - `POST /api/auth/login`
 - `POST /api/auth/logout`
