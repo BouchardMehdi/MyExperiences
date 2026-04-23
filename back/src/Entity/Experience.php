@@ -11,6 +11,9 @@ use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: ExperienceRepository::class)]
+#[ORM\Table(name: 'experience')]
+#[ORM\Index(name: 'idx_experience_organizer', columns: ['organizer_id'])]
+#[ORM\Index(name: 'idx_experience_public_filters', columns: ['status', 'location', 'price'])]
 class Experience
 {
     #[ORM\Id]
@@ -25,12 +28,12 @@ class Experience
 
     #[ORM\Column(type: Types::TEXT)]
     #[Assert\NotBlank(message: 'La description est requise.')]
-    #[Assert\Length(min: 20, minMessage: 'La description doit contenir au moins {{ limit }} caractères.')]
+    #[Assert\Length(min: 20, minMessage: 'La description doit contenir au moins {{ limit }} caracteres.')]
     private ?string $description = null;
 
     #[ORM\Column(type: Types::DECIMAL, precision: 10, scale: 2)]
     #[Assert\NotBlank(message: 'Le prix est requis.')]
-    #[Assert\PositiveOrZero(message: 'Le prix doit être positif.')]
+    #[Assert\PositiveOrZero(message: 'Le prix doit etre positif ou nul.')]
     private ?string $price = null;
 
     #[ORM\Column(length: 255)]
@@ -39,15 +42,15 @@ class Experience
     private ?string $location = null;
 
     #[ORM\Column]
-    #[Assert\NotBlank(message: 'La durée est requise.')]
-    #[Assert\Positive(message: 'La durée doit être supérieure à 0 minute.')]
+    #[Assert\NotBlank(message: 'La duree est requise.')]
+    #[Assert\Positive(message: 'La duree doit etre superieure a 0 minute.')]
     private ?int $duration = null;
 
     #[ORM\Column(length: 20, enumType: ExperienceStatus::class)]
     private ExperienceStatus $status = ExperienceStatus::DRAFT;
 
     #[ORM\ManyToOne(inversedBy: 'experiences')]
-    #[ORM\JoinColumn(nullable: false)]
+    #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
     private ?User $organizer = null;
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
@@ -166,6 +169,11 @@ class Experience
     public function getCreatedAt(): \DateTimeImmutable
     {
         return $this->createdAt;
+    }
+
+    public function isPublished(): bool
+    {
+        return ExperienceStatus::PUBLISHED === $this->status;
     }
 
     /**

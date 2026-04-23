@@ -6,7 +6,6 @@ use App\Entity\Booking;
 use App\Entity\Slot;
 use App\Entity\User;
 use App\Enum\BookingStatus;
-use App\Enum\ExperienceStatus;
 use App\Repository\BookingRepository;
 use Doctrine\DBAL\LockMode;
 use Doctrine\ORM\EntityManagerInterface;
@@ -22,7 +21,7 @@ class BookingService
     public function createBooking(User $user, Slot $slot, int $seats): Booking
     {
         if ($seats < 1) {
-            throw new \DomainException('Vous devez réserver au moins une place.');
+            throw new \DomainException('Vous devez reserver au moins une place.');
         }
 
         return $this->entityManager->wrapInTransaction(function () use ($user, $slot, $seats): Booking {
@@ -30,19 +29,19 @@ class BookingService
             $lockedSlot = $this->entityManager->find(Slot::class, $slot->getId(), LockMode::PESSIMISTIC_WRITE);
 
             if (!$lockedSlot || !$lockedSlot->isBookable()) {
-                throw new \DomainException('Ce créneau n’est plus disponible.');
+                throw new \DomainException('Ce creneau n est plus disponible.');
             }
 
-            if (ExperienceStatus::PUBLISHED !== $lockedSlot->getExperience()?->getStatus()) {
-                throw new \DomainException('Cette expérience n’est pas ouverte à la réservation.');
+            if (!$lockedSlot->getExperience()?->isPublished()) {
+                throw new \DomainException('Cette experience n est pas ouverte a la reservation.');
             }
 
             if ($lockedSlot->getRemainingPlaces() < $seats) {
-                throw new \DomainException('Le nombre de places demandé n’est plus disponible.');
+                throw new \DomainException('Le nombre de places demande n est plus disponible.');
             }
 
             if ($this->bookingRepository->hasActiveBookingForUserAndSlot($user, $lockedSlot)) {
-                throw new \DomainException('Vous avez déjà une réservation active sur ce créneau.');
+                throw new \DomainException('Vous avez deja une reservation active sur ce creneau.');
             }
 
             $booking = (new Booking())
@@ -68,16 +67,16 @@ class BookingService
             $managedBooking = $this->entityManager->find(Booking::class, $booking->getId(), LockMode::PESSIMISTIC_WRITE);
 
             if (!$managedBooking) {
-                throw new \DomainException('Réservation introuvable.');
+                throw new \DomainException('Reservation introuvable.');
             }
 
-            if (BookingStatus::CANCELLED === $managedBooking->getStatus()) {
-                throw new \DomainException('Cette réservation est déjà annulée.');
+            if ($managedBooking->isCancelled()) {
+                throw new \DomainException('Cette reservation est deja annulee.');
             }
 
             $slot = $managedBooking->getSlot();
             if (!$slot) {
-                throw new \DomainException('Créneau introuvable.');
+                throw new \DomainException('Creneau introuvable.');
             }
 
             $this->entityManager->lock($slot, LockMode::PESSIMISTIC_WRITE);

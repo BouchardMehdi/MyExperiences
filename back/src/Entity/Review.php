@@ -9,8 +9,12 @@ use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: ReviewRepository::class)]
-#[ORM\Table(name: 'review', uniqueConstraints: [new ORM\UniqueConstraint(name: 'uniq_review_user_experience', columns: ['user_id', 'experience_id'])])]
-#[UniqueEntity(fields: ['user', 'experience'], message: 'Vous avez déjà laissé un avis pour cette expérience.')]
+#[ORM\Table(name: 'review')]
+#[ORM\UniqueConstraint(name: 'uniq_review_user_experience', columns: ['user_id', 'experience_id'])]
+#[ORM\Index(name: 'idx_review_user', columns: ['user_id'])]
+#[ORM\Index(name: 'idx_review_experience', columns: ['experience_id'])]
+#[ORM\Index(name: 'idx_review_experience_created_at', columns: ['experience_id', 'created_at'])]
+#[UniqueEntity(fields: ['user', 'experience'], message: 'Vous avez deja laisse un avis pour cette experience.')]
 class Review
 {
     #[ORM\Id]
@@ -19,21 +23,21 @@ class Review
     private ?int $id = null;
 
     #[ORM\ManyToOne(inversedBy: 'reviews')]
-    #[ORM\JoinColumn(nullable: false)]
+    #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
     private ?User $user = null;
 
     #[ORM\ManyToOne(inversedBy: 'reviews')]
-    #[ORM\JoinColumn(nullable: false)]
+    #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
     private ?Experience $experience = null;
 
     #[ORM\Column]
     #[Assert\NotBlank(message: 'La note est requise.')]
-    #[Assert\Range(min: 1, max: 5, notInRangeMessage: 'La note doit être comprise entre {{ min }} et {{ max }}.')]
+    #[Assert\Range(min: 1, max: 5, notInRangeMessage: 'La note doit etre comprise entre {{ min }} et {{ max }}.')]
     private int $rating = 5;
 
     #[ORM\Column(type: Types::TEXT)]
     #[Assert\NotBlank(message: 'Le commentaire est requis.')]
-    #[Assert\Length(min: 10, minMessage: 'Le commentaire doit contenir au moins {{ limit }} caractères.')]
+    #[Assert\Length(min: 10, minMessage: 'Le commentaire doit contenir au moins {{ limit }} caracteres.')]
     private ?string $comment = null;
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]

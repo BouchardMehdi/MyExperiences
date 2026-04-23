@@ -23,7 +23,7 @@ class PaymentService
             $managedBooking = $this->entityManager->find(Booking::class, $booking->getId(), LockMode::PESSIMISTIC_WRITE);
 
             if (!$managedBooking || !$managedBooking->canBePaid()) {
-                throw new \DomainException('Cette réservation ne peut pas être payée.');
+                throw new \DomainException('Cette reservation ne peut pas etre payee.');
             }
 
             $managedBooking->setStatus(BookingStatus::PAID);
@@ -49,12 +49,12 @@ class PaymentService
             $managedBooking = $this->entityManager->find(Booking::class, $booking->getId(), LockMode::PESSIMISTIC_WRITE);
 
             if (!$managedBooking || !$managedBooking->canBePaid()) {
-                throw new \DomainException('Cette réservation ne peut plus être traitée.');
+                throw new \DomainException('Cette reservation ne peut plus etre traitee.');
             }
 
             $slot = $managedBooking->getSlot();
             if (!$slot) {
-                throw new \DomainException('Créneau introuvable.');
+                throw new \DomainException('Creneau introuvable.');
             }
 
             $this->entityManager->lock($slot, LockMode::PESSIMISTIC_WRITE);

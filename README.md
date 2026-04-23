@@ -39,7 +39,7 @@ Le backend Symfony est organise dans `back/` et expose actuellement :
 - `GET /api/health`
 - `GET /api/hello`
 
-La base Doctrine/PostgreSQL est prete pour evoluer avec migrations et logique metier. L'ancien socle Symfony a ete conserve comme base de travail, mais le routage actif est maintenant cible sur l'API.
+La base Doctrine/PostgreSQL est prete pour evoluer avec migrations et logique metier. La couche web Twig obsolete a ete retiree pour garder un backend API-first plus propre.
 
 ## Lancement local avec Docker
 

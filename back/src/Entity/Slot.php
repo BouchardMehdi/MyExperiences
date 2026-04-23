@@ -8,8 +8,13 @@ use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Validator\Constraints as Assert;
+use Symfony\Component\Validator\Context\ExecutionContextInterface;
 
 #[ORM\Entity(repositoryClass: SlotRepository::class)]
+#[ORM\Table(name: 'slot')]
+#[ORM\Index(name: 'idx_slot_experience', columns: ['experience_id'])]
+#[ORM\Index(name: 'idx_slot_experience_start_at', columns: ['experience_id', 'start_at'])]
+#[ORM\Index(name: 'idx_slot_active_start_at', columns: ['is_active', 'start_at'])]
 class Slot
 {
     #[ORM\Id]
@@ -18,11 +23,11 @@ class Slot
     private ?int $id = null;
 
     #[ORM\ManyToOne(inversedBy: 'slots')]
-    #[ORM\JoinColumn(nullable: false)]
+    #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
     private ?Experience $experience = null;
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
-    #[Assert\NotBlank(message: 'La date de début est requise.')]
+    #[Assert\NotBlank(message: 'La date de debut est requise.')]
     private ?\DateTimeImmutable $startAt = null;
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
@@ -30,8 +35,8 @@ class Slot
     private ?\DateTimeImmutable $endAt = null;
 
     #[ORM\Column]
-    #[Assert\NotBlank(message: 'La capacité est requise.')]
-    #[Assert\Positive(message: 'La capacité doit être supérieure à 0.')]
+    #[Assert\NotBlank(message: 'La capacite est requise.')]
+    #[Assert\Positive(message: 'La capacite doit etre superieure a 0.')]
     private int $capacity = 0;
 
     #[ORM\Column]
@@ -117,7 +122,7 @@ class Slot
 
     public function setRemainingPlaces(int $remainingPlaces): static
     {
-        $this->remainingPlaces = max(0, $remainingPlaces);
+        $this->remainingPlaces = min($this->capacity, max(0, $remainingPlaces));
 
         return $this;
     }
@@ -162,11 +167,17 @@ class Slot
     }
 
     #[Assert\Callback]
-    public function validateDates(\Symfony\Component\Validator\Context\ExecutionContextInterface $context): void
+    public function validateDates(ExecutionContextInterface $context): void
     {
         if ($this->startAt && $this->endAt && $this->endAt <= $this->startAt) {
-            $context->buildViolation('La fin du créneau doit être après le début.')
+            $context->buildViolation('La fin du creneau doit etre apres le debut.')
                 ->atPath('endAt')
+                ->addViolation();
+        }
+
+        if ($this->remainingPlaces > $this->capacity) {
+            $context->buildViolation('Les places restantes ne peuvent pas depasser la capacite.')
+                ->atPath('remainingPlaces')
                 ->addViolation();
         }
     }
@@ -174,5 +185,10 @@ class Slot
     public function isBookable(): bool
     {
         return $this->isActive && $this->remainingPlaces > 0 && $this->startAt > new \DateTimeImmutable();
+    }
+
+    public function hasRemainingPlaces(): bool
+    {
+        return $this->remainingPlaces > 0;
     }
 }

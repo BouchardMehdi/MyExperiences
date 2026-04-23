@@ -12,8 +12,8 @@ enum ExperienceStatus: string
     {
         return match ($this) {
             self::DRAFT => 'Brouillon',
-            self::PUBLISHED => 'Publiée',
-            self::ARCHIVED => 'Archivée',
+            self::PUBLISHED => 'Publiee',
+            self::ARCHIVED => 'Archivee',
         };
     }
 }

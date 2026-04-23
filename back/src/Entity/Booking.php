@@ -11,6 +11,10 @@ use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: BookingRepository::class)]
+#[ORM\Table(name: 'booking')]
+#[ORM\Index(name: 'idx_booking_user', columns: ['user_id'])]
+#[ORM\Index(name: 'idx_booking_slot', columns: ['slot_id'])]
+#[ORM\Index(name: 'idx_booking_user_status_created_at', columns: ['user_id', 'status', 'created_at'])]
 class Booking
 {
     #[ORM\Id]
@@ -19,11 +23,11 @@ class Booking
     private ?int $id = null;
 
     #[ORM\ManyToOne(inversedBy: 'bookings')]
-    #[ORM\JoinColumn(nullable: false)]
+    #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
     private ?User $user = null;
 
     #[ORM\ManyToOne(inversedBy: 'bookings')]
-    #[ORM\JoinColumn(nullable: false)]
+    #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
     private ?Slot $slot = null;
 
     #[ORM\Column(length: 20, enumType: BookingStatus::class)]
@@ -31,7 +35,7 @@ class Booking
 
     #[ORM\Column]
     #[Assert\NotBlank(message: 'Le nombre de places est requis.')]
-    #[Assert\Positive(message: 'Vous devez réserver au moins une place.')]
+    #[Assert\Positive(message: 'Vous devez reserver au moins une place.')]
     private int $seats = 1;
 
     #[ORM\Column(type: Types::DECIMAL, precision: 10, scale: 2)]
@@ -153,5 +157,15 @@ class Booking
     public function canBePaid(): bool
     {
         return BookingStatus::PENDING === $this->status;
+    }
+
+    public function isPaid(): bool
+    {
+        return BookingStatus::PAID === $this->status;
+    }
+
+    public function isCancelled(): bool
+    {
+        return BookingStatus::CANCELLED === $this->status;
     }
 }

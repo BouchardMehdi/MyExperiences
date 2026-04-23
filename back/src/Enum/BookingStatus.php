@@ -12,8 +12,8 @@ enum BookingStatus: string
     {
         return match ($this) {
             self::PENDING => 'En attente',
-            self::PAID => 'Payée',
-            self::CANCELLED => 'Annulée',
+            self::PAID => 'Payee',
+            self::CANCELLED => 'Annulee',
         };
     }
 }

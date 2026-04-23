@@ -8,6 +8,10 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: PaymentRepository::class)]
+#[ORM\Table(name: 'payment')]
+#[ORM\UniqueConstraint(name: 'uniq_payment_ref', columns: ['transaction_ref'])]
+#[ORM\Index(name: 'idx_payment_booking', columns: ['booking_id'])]
+#[ORM\Index(name: 'idx_payment_booking_status', columns: ['booking_id', 'status'])]
 class Payment
 {
     #[ORM\Id]
@@ -16,7 +20,7 @@ class Payment
     private ?int $id = null;
 
     #[ORM\ManyToOne(inversedBy: 'payments')]
-    #[ORM\JoinColumn(nullable: false)]
+    #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
     private ?Booking $booking = null;
 
     #[ORM\Column(type: Types::DECIMAL, precision: 10, scale: 2)]
@@ -28,7 +32,7 @@ class Payment
     #[ORM\Column(length: 50)]
     private string $provider = 'mock';
 
-    #[ORM\Column(length: 100, unique: true)]
+    #[ORM\Column(length: 100)]
     private ?string $transactionRef = null;
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
@@ -107,5 +111,10 @@ class Payment
     public function getCreatedAt(): \DateTimeImmutable
     {
         return $this->createdAt;
+    }
+
+    public function isSuccessful(): bool
+    {
+        return PaymentStatus::SUCCESS === $this->status;
     }
 }
