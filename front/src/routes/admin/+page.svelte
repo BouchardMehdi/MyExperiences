@@ -4,10 +4,12 @@
   import { onMount } from 'svelte';
   import { clearAuthSession, getStoredAuthToken, updateAuthUser } from '$lib/auth/session';
   import {
+    approveOrganizerRequest,
     deleteAdminExperience,
     deleteAdminReview,
     fetchAdminDashboard,
     fetchCurrentUser,
+    rejectOrganizerRequest,
     updateAdminExperience,
     updateAdminUser
   } from '$lib/api/client';
@@ -235,6 +237,58 @@
       processingKey = '';
     }
   }
+
+  /**
+   * @param {number} requestId
+   */
+  async function handleApproveOrganizerRequest(requestId) {
+    const token = getStoredAuthToken();
+
+    if (!token) {
+      await goto(`${base}/login`);
+      return;
+    }
+
+    processingKey = `approve-request-${requestId}`;
+    error = '';
+    success = '';
+
+    try {
+      await approveOrganizerRequest(token, requestId);
+      await loadDashboard(token);
+      success = 'Demande organisateur approuvee.';
+    } catch (exception) {
+      error = exception instanceof Error ? exception.message : 'Erreur inconnue.';
+    } finally {
+      processingKey = '';
+    }
+  }
+
+  /**
+   * @param {number} requestId
+   */
+  async function handleRejectOrganizerRequest(requestId) {
+    const token = getStoredAuthToken();
+
+    if (!token) {
+      await goto(`${base}/login`);
+      return;
+    }
+
+    processingKey = `reject-request-${requestId}`;
+    error = '';
+    success = '';
+
+    try {
+      await rejectOrganizerRequest(token, requestId);
+      await loadDashboard(token);
+      success = 'Demande organisateur refusee.';
+    } catch (exception) {
+      error = exception instanceof Error ? exception.message : 'Erreur inconnue.';
+    } finally {
+      processingKey = '';
+    }
+  }
 </script>
 
 <svelte:head>
@@ -271,6 +325,10 @@
           <strong>{dashboard.stats?.reviewCount || 0}</strong>
           <span>Avis</span>
         </article>
+        <article class="stat-card">
+          <strong>{dashboard.stats?.pendingOrganizerRequestCount || 0}</strong>
+          <span>Demandes organisateur</span>
+        </article>
       </div>
     </div>
 
@@ -281,6 +339,52 @@
     {#if success}
       <p class="inline-success">{success}</p>
     {/if}
+
+    <section class="panel">
+      <div class="panel-head">
+        <span class="eyebrow">Demandes</span>
+        <h2>Demandes organisateur</h2>
+      </div>
+
+      {#if dashboard.organizerRequests?.length}
+        <div class="card-list">
+          {#each dashboard.organizerRequests as organizerRequest (organizerRequest.id)}
+            <article class="card">
+              <header class="card-head">
+                <div>
+                  <strong>{organizerRequest.user?.fullName || 'Utilisateur'}</strong>
+                  <small>{organizerRequest.user?.email} - {formatDateTime(organizerRequest.createdAt)}</small>
+                </div>
+                <span class="status-chip">{organizerRequest.status}</span>
+              </header>
+
+              <p>{organizerRequest.motivation}</p>
+
+              <div class="action-row">
+                <button
+                  class="primary"
+                  disabled={processingKey === `approve-request-${organizerRequest.id}`}
+                  on:click={() => handleApproveOrganizerRequest(organizerRequest.id)}
+                  type="button"
+                >
+                  {processingKey === `approve-request-${organizerRequest.id}` ? 'Validation...' : 'Approuver'}
+                </button>
+                <button
+                  class="secondary danger"
+                  disabled={processingKey === `reject-request-${organizerRequest.id}`}
+                  on:click={() => handleRejectOrganizerRequest(organizerRequest.id)}
+                  type="button"
+                >
+                  {processingKey === `reject-request-${organizerRequest.id}` ? 'Refus...' : 'Refuser'}
+                </button>
+              </div>
+            </article>
+          {/each}
+        </div>
+      {:else}
+        <p class="empty">Aucune demande organisateur en attente.</p>
+      {/if}
+    </section>
 
     <section class="panel">
       <div class="panel-head">
@@ -507,7 +611,7 @@
 
   .stats-grid {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 0.85rem;
     margin-top: 1.2rem;
   }

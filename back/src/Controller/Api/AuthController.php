@@ -3,9 +3,11 @@
 namespace App\Controller\Api;
 
 use App\Api\AuthApiPresenter;
+use App\Api\OrganizerRequestApiPresenter;
 use App\Dto\Auth\LoginInput;
 use App\Dto\Auth\RegisterInput;
 use App\Entity\User;
+use App\Repository\OrganizerRequestRepository;
 use App\Repository\UserRepository;
 use App\Service\ApiTokenManager;
 use Doctrine\ORM\EntityManagerInterface;
@@ -28,6 +30,8 @@ class AuthController extends AbstractController
         UserRepository $userRepository,
         UserPasswordHasherInterface $passwordHasher,
         ApiTokenManager $apiTokenManager,
+        OrganizerRequestRepository $organizerRequestRepository,
+        OrganizerRequestApiPresenter $organizerRequestApiPresenter,
         EntityManagerInterface $entityManager,
         AuthApiPresenter $authApiPresenter,
     ): JsonResponse {
@@ -73,10 +77,14 @@ class AuthController extends AbstractController
         $issuedToken = $apiTokenManager->issueToken($user);
         $entityManager->flush();
 
-        return $this->json(
-            $authApiPresenter->presentAuth($user, $issuedToken['plainTextToken'], $issuedToken['apiToken']),
-            Response::HTTP_CREATED
-        );
+        $latestOrganizerRequest = $organizerRequestRepository->findLatestForUser($user);
+
+        return $this->json($authApiPresenter->presentAuth(
+            $user,
+            $issuedToken['plainTextToken'],
+            $issuedToken['apiToken'],
+            null === $latestOrganizerRequest ? null : $organizerRequestApiPresenter->present($latestOrganizerRequest)
+        ), Response::HTTP_CREATED);
     }
 
     #[Route('/auth/login', name: 'login', methods: ['POST'])]
@@ -86,6 +94,8 @@ class AuthController extends AbstractController
         UserRepository $userRepository,
         UserPasswordHasherInterface $passwordHasher,
         ApiTokenManager $apiTokenManager,
+        OrganizerRequestRepository $organizerRequestRepository,
+        OrganizerRequestApiPresenter $organizerRequestApiPresenter,
         EntityManagerInterface $entityManager,
         AuthApiPresenter $authApiPresenter,
     ): JsonResponse {
@@ -119,15 +129,22 @@ class AuthController extends AbstractController
         $issuedToken = $apiTokenManager->issueToken($user);
         $entityManager->flush();
 
+        $latestOrganizerRequest = $organizerRequestRepository->findLatestForUser($user);
+
         return $this->json($authApiPresenter->presentAuth(
             $user,
             $issuedToken['plainTextToken'],
-            $issuedToken['apiToken']
+            $issuedToken['apiToken'],
+            null === $latestOrganizerRequest ? null : $organizerRequestApiPresenter->present($latestOrganizerRequest)
         ));
     }
 
     #[Route('/me', name: 'me', methods: ['GET'])]
-    public function me(AuthApiPresenter $authApiPresenter): JsonResponse
+    public function me(
+        AuthApiPresenter $authApiPresenter,
+        OrganizerRequestRepository $organizerRequestRepository,
+        OrganizerRequestApiPresenter $organizerRequestApiPresenter,
+    ): JsonResponse
     {
         $user = $this->getUser();
 
@@ -141,7 +158,12 @@ class AuthController extends AbstractController
         }
 
         return $this->json([
-            'data' => $authApiPresenter->presentUser($user),
+            'data' => $authApiPresenter->presentUser(
+                $user,
+                null === ($latestOrganizerRequest = $organizerRequestRepository->findLatestForUser($user))
+                    ? null
+                    : $organizerRequestApiPresenter->present($latestOrganizerRequest)
+            ),
         ]);
     }
 

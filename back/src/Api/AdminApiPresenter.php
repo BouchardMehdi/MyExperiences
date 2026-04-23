@@ -3,6 +3,7 @@
 namespace App\Api;
 
 use App\Entity\Experience;
+use App\Entity\OrganizerRequest;
 use App\Entity\Review;
 use App\Entity\User;
 
@@ -36,12 +37,22 @@ class AdminApiPresenter
     }
 
     /**
+     * @param list<OrganizerRequest> $organizerRequests
+     * @return list<array<string, mixed>>
+     */
+    public function presentOrganizerRequests(array $organizerRequests): array
+    {
+        return array_map(fn (OrganizerRequest $organizerRequest): array => $this->presentOrganizerRequest($organizerRequest), $organizerRequests);
+    }
+
+    /**
      * @param list<User> $users
      * @param list<Experience> $experiences
      * @param list<Review> $reviews
+     * @param list<OrganizerRequest> $organizerRequests
      * @return array<string, mixed>
      */
-    public function presentDashboard(array $users, array $experiences, array $reviews): array
+    public function presentDashboard(array $users, array $experiences, array $reviews, array $organizerRequests): array
     {
         $publishedCount = count(array_filter($experiences, static fn (Experience $experience): bool => 'PUBLISHED' === $experience->getStatus()->value));
         $organizerCount = count(array_filter($users, static fn (User $user): bool => $user->isOrganizer()));
@@ -53,10 +64,12 @@ class AdminApiPresenter
                 'experienceCount' => count($experiences),
                 'publishedExperienceCount' => $publishedCount,
                 'reviewCount' => count($reviews),
+                'pendingOrganizerRequestCount' => count($organizerRequests),
             ],
             'users' => $this->presentUsers($users),
             'experiences' => $this->presentExperiences($experiences),
             'reviews' => $this->presentReviews($reviews),
+            'organizerRequests' => $this->presentOrganizerRequests($organizerRequests),
         ];
     }
 
@@ -128,6 +141,30 @@ class AdminApiPresenter
                 'id' => $review->getExperience()?->getId(),
                 'title' => $review->getExperience()?->getTitle(),
                 'status' => $review->getExperience()?->getStatus()->value,
+            ],
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function presentOrganizerRequest(OrganizerRequest $organizerRequest): array
+    {
+        return [
+            'id' => $organizerRequest->getId(),
+            'status' => $organizerRequest->getStatus()->value,
+            'motivation' => $organizerRequest->getMotivation(),
+            'createdAt' => $organizerRequest->getCreatedAt()->format(\DateTimeInterface::ATOM),
+            'processedAt' => $organizerRequest->getProcessedAt()?->format(\DateTimeInterface::ATOM),
+            'user' => [
+                'id' => $organizerRequest->getUser()?->getId(),
+                'fullName' => $organizerRequest->getUser()?->getFullName(),
+                'email' => $organizerRequest->getUser()?->getEmail(),
+            ],
+            'reviewedBy' => null === $organizerRequest->getReviewedBy() ? null : [
+                'id' => $organizerRequest->getReviewedBy()?->getId(),
+                'fullName' => $organizerRequest->getReviewedBy()?->getFullName(),
+                'email' => $organizerRequest->getReviewedBy()?->getEmail(),
             ],
         ];
     }

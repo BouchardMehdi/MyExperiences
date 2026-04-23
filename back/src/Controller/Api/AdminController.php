@@ -4,10 +4,12 @@ namespace App\Controller\Api;
 
 use App\Api\AdminApiPresenter;
 use App\Entity\Experience;
+use App\Entity\OrganizerRequest;
 use App\Entity\Review;
 use App\Entity\User;
 use App\Enum\ExperienceStatus;
 use App\Repository\ExperienceRepository;
+use App\Repository\OrganizerRequestRepository;
 use App\Repository\ReviewRepository;
 use App\Repository\UserRepository;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
@@ -28,6 +30,7 @@ class AdminController extends AbstractController
         UserRepository $userRepository,
         ExperienceRepository $experienceRepository,
         ReviewRepository $reviewRepository,
+        OrganizerRequestRepository $organizerRequestRepository,
         AdminApiPresenter $adminApiPresenter,
     ): JsonResponse {
         $admin = $this->getAdminUser();
@@ -38,9 +41,10 @@ class AdminController extends AbstractController
         $users = $userRepository->findAllDetailed();
         $experiences = $experienceRepository->findAllDetailed();
         $reviews = $reviewRepository->findAllDetailed();
+        $organizerRequests = $organizerRequestRepository->findPendingDetailed();
 
         return $this->json([
-            'data' => $adminApiPresenter->presentDashboard($users, $experiences, $reviews),
+            'data' => $adminApiPresenter->presentDashboard($users, $experiences, $reviews, $organizerRequests),
         ]);
     }
 
@@ -183,6 +187,83 @@ class AdminController extends AbstractController
                 'id' => $id,
                 'deleted' => true,
             ],
+        ]);
+    }
+
+    #[Route('/organizer-requests/{id<\d+>}/approve', name: 'organizer_requests_approve', methods: ['POST'])]
+    public function organizerRequestsApprove(
+        int $id,
+        OrganizerRequestRepository $organizerRequestRepository,
+        EntityManagerInterface $entityManager,
+        AdminApiPresenter $adminApiPresenter,
+    ): JsonResponse {
+        $admin = $this->getAdminUser();
+        if ($admin instanceof JsonResponse) {
+            return $admin;
+        }
+
+        $organizerRequest = $organizerRequestRepository->findDetailedById($id);
+        if (!$organizerRequest) {
+            return $this->createNotFoundResponse('organizer_request_not_found', 'Organizer request not found.');
+        }
+
+        if (!$organizerRequest->isPending()) {
+            return $this->json([
+                'error' => [
+                    'code' => 'organizer_request_already_processed',
+                    'message' => 'This organizer request has already been processed.',
+                ],
+            ], Response::HTTP_CONFLICT);
+        }
+
+        $organizerRequest->approve($admin);
+
+        $applicant = $organizerRequest->getUser();
+        if ($applicant instanceof User && !$applicant->isOrganizer()) {
+            $roles = $applicant->getRoles();
+            $roles[] = 'ROLE_ORGANIZER';
+            $applicant->setRoles($roles);
+            $entityManager->persist($applicant);
+        }
+
+        $entityManager->flush();
+
+        return $this->json([
+            'data' => $adminApiPresenter->presentOrganizerRequest($organizerRequest),
+        ]);
+    }
+
+    #[Route('/organizer-requests/{id<\d+>}/reject', name: 'organizer_requests_reject', methods: ['POST'])]
+    public function organizerRequestsReject(
+        int $id,
+        OrganizerRequestRepository $organizerRequestRepository,
+        EntityManagerInterface $entityManager,
+        AdminApiPresenter $adminApiPresenter,
+    ): JsonResponse {
+        $admin = $this->getAdminUser();
+        if ($admin instanceof JsonResponse) {
+            return $admin;
+        }
+
+        $organizerRequest = $organizerRequestRepository->findDetailedById($id);
+        if (!$organizerRequest) {
+            return $this->createNotFoundResponse('organizer_request_not_found', 'Organizer request not found.');
+        }
+
+        if (!$organizerRequest->isPending()) {
+            return $this->json([
+                'error' => [
+                    'code' => 'organizer_request_already_processed',
+                    'message' => 'This organizer request has already been processed.',
+                ],
+            ], Response::HTTP_CONFLICT);
+        }
+
+        $organizerRequest->reject($admin);
+        $entityManager->flush();
+
+        return $this->json([
+            'data' => $adminApiPresenter->presentOrganizerRequest($organizerRequest),
         ]);
     }
 

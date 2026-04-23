@@ -74,6 +74,18 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\OneToMany(mappedBy: 'user', targetEntity: ApiToken::class, orphanRemoval: true)]
     private Collection $apiTokens;
 
+    /**
+     * @var Collection<int, OrganizerRequest>
+     */
+    #[ORM\OneToMany(mappedBy: 'user', targetEntity: OrganizerRequest::class, orphanRemoval: true)]
+    private Collection $organizerRequests;
+
+    /**
+     * @var Collection<int, OrganizerRequest>
+     */
+    #[ORM\OneToMany(mappedBy: 'reviewedBy', targetEntity: OrganizerRequest::class)]
+    private Collection $reviewedOrganizerRequests;
+
     public function __construct()
     {
         $this->createdAt = new \DateTimeImmutable();
@@ -81,6 +93,8 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->bookings = new ArrayCollection();
         $this->reviews = new ArrayCollection();
         $this->apiTokens = new ArrayCollection();
+        $this->organizerRequests = new ArrayCollection();
+        $this->reviewedOrganizerRequests = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -292,5 +306,40 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         }
 
         return $this;
+    }
+
+    /**
+     * @return Collection<int, OrganizerRequest>
+     */
+    public function getOrganizerRequests(): Collection
+    {
+        return $this->organizerRequests;
+    }
+
+    public function addOrganizerRequest(OrganizerRequest $organizerRequest): static
+    {
+        if (!$this->organizerRequests->contains($organizerRequest)) {
+            $this->organizerRequests->add($organizerRequest);
+            $organizerRequest->setUser($this);
+        }
+
+        return $this;
+    }
+
+    public function removeOrganizerRequest(OrganizerRequest $organizerRequest): static
+    {
+        if ($this->organizerRequests->removeElement($organizerRequest) && $organizerRequest->getUser() === $this) {
+            $organizerRequest->setUser(null);
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, OrganizerRequest>
+     */
+    public function getReviewedOrganizerRequests(): Collection
+    {
+        return $this->reviewedOrganizerRequests;
     }
 }

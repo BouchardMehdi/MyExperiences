@@ -10,7 +10,7 @@ class AuthApiPresenter
     /**
      * @return array<string, mixed>
      */
-    public function presentAuth(User $user, string $plainTextToken, ApiToken $apiToken): array
+    public function presentAuth(User $user, string $plainTextToken, ApiToken $apiToken, ?array $organizerRequest = null): array
     {
         return [
             'token' => [
@@ -18,14 +18,14 @@ class AuthApiPresenter
                 'value' => $plainTextToken,
                 'expiresAt' => $apiToken->getExpiresAt()->format(\DateTimeInterface::ATOM),
             ],
-            'user' => $this->presentUser($user),
+            'user' => $this->presentUser($user, $organizerRequest),
         ];
     }
 
     /**
      * @return array<string, mixed>
      */
-    public function presentUser(User $user): array
+    public function presentUser(User $user, ?array $organizerRequest = null): array
     {
         return [
             'id' => $user->getId(),
@@ -35,6 +35,7 @@ class AuthApiPresenter
             'fullName' => $user->getFullName(),
             'roles' => $user->getRoles(),
             'createdAt' => $user->getCreatedAt()->format(\DateTimeInterface::ATOM),
+            'organizerRequest' => $organizerRequest,
         ];
     }
 

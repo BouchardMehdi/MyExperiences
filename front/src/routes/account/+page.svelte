@@ -3,7 +3,13 @@
   import { base } from '$app/paths';
   import { onMount } from 'svelte';
   import { authSession, clearAuthSession, getStoredAuthToken, updateAuthUser } from '$lib/auth/session';
-  import { cancelBooking, fetchCurrentUser, fetchMyBookings, payBooking } from '$lib/api/client';
+  import {
+    cancelBooking,
+    fetchCurrentUser,
+    fetchMyBookings,
+    payBooking,
+    requestOrganizerAccess
+  } from '$lib/api/client';
   import { formatBookingStatus, formatPaymentStatus } from '$lib/utils/booking';
   import { formatDateTime, formatPrice } from '$lib/utils/experience';
 
@@ -19,6 +25,10 @@
   let cancellingBookingId = null;
   /** @type {number | null} */
   let payingBookingId = null;
+  let organizerRequestMessage = '';
+  let organizerRequestError = '';
+  let organizerMotivation = '';
+  let isSubmittingOrganizerRequest = false;
 
   onMount(async () => {
     const token = getStoredAuthToken();
@@ -52,6 +62,18 @@
   });
 
   $: currentUser = /** @type {Record<string, any> | null} */ ($authSession.user);
+
+  function isOrganizerUser() {
+    return !!(
+      currentUser &&
+      Array.isArray(currentUser.roles) &&
+      (currentUser.roles.includes('ROLE_ORGANIZER') || currentUser.roles.includes('ROLE_ADMIN'))
+    );
+  }
+
+  function getOrganizerRequestStatus() {
+    return currentUser?.organizerRequest?.status || null;
+  }
 
   /**
    * @param {number} bookingId
@@ -120,6 +142,37 @@
       payingBookingId = null;
     }
   }
+
+  async function handleOrganizerRequest() {
+    const token = getStoredAuthToken();
+
+    if (!token) {
+      await goto(`${base}/login`);
+      return;
+    }
+
+    isSubmittingOrganizerRequest = true;
+    organizerRequestError = '';
+    organizerRequestMessage = '';
+
+    try {
+      await requestOrganizerAccess(token, {
+        motivation: organizerMotivation
+      });
+
+      const refreshedUserResponse = await fetchCurrentUser(token);
+      if (refreshedUserResponse.data && typeof refreshedUserResponse.data === 'object') {
+        updateAuthUser(/** @type {Record<string, unknown>} */ (refreshedUserResponse.data));
+      }
+
+      organizerMotivation = '';
+      organizerRequestMessage = 'Votre demande organisateur a bien ete envoyee.';
+    } catch (exception) {
+      organizerRequestError = exception instanceof Error ? exception.message : 'Erreur inconnue.';
+    } finally {
+      isSubmittingOrganizerRequest = false;
+    }
+  }
 </script>
 
 <svelte:head>
@@ -162,6 +215,47 @@
             <dd>{Array.isArray(currentUser.roles) ? currentUser.roles.join(', ') : 'ROLE_USER'}</dd>
           </div>
         </dl>
+      </article>
+
+      <article class="panel">
+        <span class="eyebrow">Organisateur</span>
+        <h2>Acces organisateur</h2>
+
+        {#if organizerRequestError}
+          <p class="inline-error">{organizerRequestError}</p>
+        {/if}
+
+        {#if organizerRequestMessage}
+          <p class="inline-success">{organizerRequestMessage}</p>
+        {/if}
+
+        {#if isOrganizerUser()}
+          <p class="empty">Votre compte dispose deja de l'acces organisateur.</p>
+        {:else if getOrganizerRequestStatus() === 'PENDING'}
+          <p class="empty">
+            Votre demande est en attente de validation par un administrateur depuis
+            {formatDateTime(currentUser.organizerRequest?.createdAt)}.
+          </p>
+        {:else if getOrganizerRequestStatus() === 'APPROVED'}
+          <p class="empty">Votre demande a ete approuvee. Rechargez la session si besoin pour voir l'acces organisateur.</p>
+        {:else}
+          {#if getOrganizerRequestStatus() === 'REJECTED'}
+            <p class="empty">
+              Votre precedente demande a ete refusee. Vous pouvez soumettre une nouvelle demande avec plus de contexte.
+            </p>
+          {/if}
+
+          <form class="request-form" on:submit|preventDefault={handleOrganizerRequest}>
+            <label>
+              <span>Pourquoi souhaitez-vous devenir organisateur ?</span>
+              <textarea bind:value={organizerMotivation} minlength="20" rows="5"></textarea>
+            </label>
+
+            <button class="primary-action" disabled={isSubmittingOrganizerRequest} type="submit">
+              {isSubmittingOrganizerRequest ? 'Envoi...' : 'Envoyer ma demande'}
+            </button>
+          </form>
+        {/if}
       </article>
 
       <article class="panel">
@@ -277,7 +371,7 @@
 
   .details-grid {
     display: grid;
-    grid-template-columns: minmax(300px, 0.9fr) minmax(0, 1.3fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 1rem;
   }
 
@@ -430,6 +524,36 @@
     background: rgba(255, 255, 255, 0.86);
     border: 1px solid rgba(143, 108, 82, 0.12);
     color: #6d5341;
+  }
+
+  .request-form {
+    display: grid;
+    gap: 0.8rem;
+    margin-top: 1rem;
+  }
+
+  .request-form label {
+    display: grid;
+    gap: 0.4rem;
+  }
+
+  .request-form span {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #866854;
+    font-weight: 700;
+  }
+
+  .request-form textarea {
+    min-height: 8rem;
+    padding: 0.8rem 1rem;
+    border-radius: 1rem;
+    border: 1px solid rgba(143, 108, 82, 0.22);
+    background: #fffdf9;
+    color: #291d16;
+    font: inherit;
+    resize: vertical;
   }
 
   .inline-error,

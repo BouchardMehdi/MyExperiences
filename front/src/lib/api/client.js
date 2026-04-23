@@ -396,3 +396,43 @@ export async function deleteAdminReview(token, reviewId) {
     headers: createAuthHeaders(token)
   });
 }
+
+/**
+ * @param {string} token
+ * @param {{ motivation: string }} payload
+ * @returns {Promise<ApiPayload>}
+ */
+export async function requestOrganizerAccess(token, payload) {
+  return apiFetch('/organizer-requests', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...createAuthHeaders(token)
+    },
+    body: JSON.stringify(payload)
+  });
+}
+
+/**
+ * @param {string} token
+ * @param {number | string} requestId
+ * @returns {Promise<ApiPayload>}
+ */
+export async function approveOrganizerRequest(token, requestId) {
+  return apiFetch(`/admin/organizer-requests/${requestId}/approve`, {
+    method: 'POST',
+    headers: createAuthHeaders(token)
+  });
+}
+
+/**
+ * @param {string} token
+ * @param {number | string} requestId
+ * @returns {Promise<ApiPayload>}
+ */
+export async function rejectOrganizerRequest(token, requestId) {
+  return apiFetch(`/admin/organizer-requests/${requestId}/reject`, {
+    method: 'POST',
+    headers: createAuthHeaders(token)
+  });
+}
