@@ -1,17 +1,26 @@
 <script>
+  import { goto } from '$app/navigation';
   import { base } from '$app/paths';
   import { browser } from '$app/environment';
   import { page } from '$app/stores';
-  import { fetchExperienceById } from '$lib/api/client';
+  import { authSession, getStoredAuthToken } from '$lib/auth/session';
+  import { createBooking, fetchExperienceById } from '$lib/api/client';
   import { formatDateTime, formatDuration, formatPrice } from '$lib/utils/experience';
 
   /** @type {any} */
   let experience = null;
   let isLoading = true;
   let error = '';
+  let experienceId = '';
   let currentId = '';
+  let selectedSlotId = '';
+  let seats = 1;
+  let bookingError = '';
+  let bookingSuccess = '';
+  let isSubmittingBooking = false;
 
-  $: experienceId = $page.params.id;
+  $: experienceId = $page.params.id ?? '';
+  $: authenticatedUser = /** @type {Record<string, any> | null} */ ($authSession.user);
 
   $: if (browser && experienceId && experienceId !== currentId) {
     currentId = experienceId;
@@ -25,14 +34,50 @@
     isLoading = true;
     error = '';
     experience = null;
+    bookingError = '';
+    bookingSuccess = '';
 
     try {
       const response = await fetchExperienceById(id);
       experience = response.data || null;
+      selectedSlotId = experience?.slots?.[0]?.id ? String(experience.slots[0].id) : '';
     } catch (exception) {
       error = exception instanceof Error ? exception.message : 'Erreur inconnue.';
     } finally {
       isLoading = false;
+    }
+  }
+
+  async function submitBooking() {
+    const token = getStoredAuthToken();
+
+    if (!token) {
+      await goto(`${base}/login`);
+      return;
+    }
+
+    if (!selectedSlotId) {
+      bookingError = 'Veuillez choisir un creneau.';
+      return;
+    }
+
+    isSubmittingBooking = true;
+    bookingError = '';
+    bookingSuccess = '';
+
+    try {
+      await createBooking(token, {
+        slotId: Number(selectedSlotId),
+        seats
+      });
+
+      bookingSuccess = 'Reservation creee. Vous pouvez la retrouver dans votre compte.';
+      await loadExperience(experienceId);
+      await goto(`${base}/account`, { keepFocus: true, noScroll: true });
+    } catch (exception) {
+      bookingError = exception instanceof Error ? exception.message : 'Erreur inconnue.';
+    } finally {
+      isSubmittingBooking = false;
     }
   }
 </script>
@@ -69,21 +114,52 @@
         <span>{formatDuration(experience.durationMinutes)}</span>
         <span>{experience.booking?.availableSlotsCount} creneaux disponibles</span>
         {#if experience.reviewSummary?.count}
-          <span>{experience.reviewSummary.averageRating}/5 · {experience.reviewSummary.count} avis</span>
+          <span>{experience.reviewSummary.averageRating}/5 - {experience.reviewSummary.count} avis</span>
         {/if}
       </div>
     </div>
 
     <aside class="booking-panel">
       <strong>Reservation</strong>
-      <p>
-        {#if experience.booking?.isBookable}
-          Des creneaux sont disponibles. La reservation utilisateur sera branchee a l'etape
-          suivante.
-        {:else}
-          Aucun creneau reservable pour le moment.
-        {/if}
-      </p>
+
+      {#if !authenticatedUser}
+        <p>Connectez-vous pour reserver un creneau disponible.</p>
+        <a class="primary-link" href={`${base}/login`}>Se connecter</a>
+      {:else if experience.booking?.isBookable && experience.slots?.length}
+        <p>Choisissez un creneau et le nombre de places a reserver.</p>
+
+        <form class="booking-form" on:submit|preventDefault={submitBooking}>
+          <label>
+            <span>Creneau</span>
+            <select bind:value={selectedSlotId}>
+              {#each experience.slots as slot (slot.id)}
+                <option value={slot.id}>
+                  {formatDateTime(slot.startAt)} - {slot.remainingPlaces} places restantes
+                </option>
+              {/each}
+            </select>
+          </label>
+
+          <label>
+            <span>Places</span>
+            <input bind:value={seats} min="1" type="number" />
+          </label>
+
+          {#if bookingError}
+            <p class="inline-error">{bookingError}</p>
+          {/if}
+
+          {#if bookingSuccess}
+            <p class="inline-success">{bookingSuccess}</p>
+          {/if}
+
+          <button class="primary-link" disabled={isSubmittingBooking} type="submit">
+            {isSubmittingBooking ? 'Reservation...' : 'Reserver'}
+          </button>
+        </form>
+      {:else}
+        <p>Aucun creneau reservable pour le moment.</p>
+      {/if}
 
       <dl>
         <div>
@@ -243,6 +319,76 @@
     background: rgba(243, 231, 220, 0.9);
     color: #6e513e;
     font-weight: 700;
+  }
+
+  .booking-form {
+    display: grid;
+    gap: 0.8rem;
+    margin-top: 1rem;
+  }
+
+  .booking-form label {
+    display: grid;
+    gap: 0.4rem;
+  }
+
+  .booking-form span {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #866854;
+    font-weight: 700;
+  }
+
+  .booking-form select,
+  .booking-form input {
+    min-height: 3rem;
+    padding: 0.8rem 1rem;
+    border-radius: 1rem;
+    border: 1px solid rgba(143, 108, 82, 0.22);
+    background: #fffdf9;
+    color: #291d16;
+    font: inherit;
+  }
+
+  .primary-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 3rem;
+    padding: 0.8rem 1rem;
+    border-radius: 999px;
+    background: #8d5430;
+    color: #fff9f1;
+    text-decoration: none;
+    border: 0;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .primary-link:disabled {
+    opacity: 0.7;
+    cursor: wait;
+  }
+
+  .inline-error,
+  .inline-success {
+    margin: 0;
+    padding: 0.85rem 1rem;
+    border-radius: 1rem;
+  }
+
+  .inline-error {
+    background: rgba(255, 244, 241, 0.92);
+    color: #9c2f20;
+    border: 1px solid rgba(156, 47, 32, 0.16);
+  }
+
+  .inline-success {
+    background: rgba(234, 247, 239, 0.92);
+    color: #1f7e5c;
+    border: 1px solid rgba(31, 126, 92, 0.16);
   }
 
   dl {

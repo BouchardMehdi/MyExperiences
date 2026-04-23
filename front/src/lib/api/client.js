@@ -150,3 +150,41 @@ export async function logoutUser(token) {
     headers: createAuthHeaders(token)
   });
 }
+
+/**
+ * @param {string} token
+ * @returns {Promise<ApiPayload>}
+ */
+export async function fetchMyBookings(token) {
+  return apiFetch('/bookings', {
+    headers: createAuthHeaders(token)
+  });
+}
+
+/**
+ * @param {string} token
+ * @param {{ slotId: number | string; seats: number | string }} payload
+ * @returns {Promise<ApiPayload>}
+ */
+export async function createBooking(token, payload) {
+  return apiFetch('/bookings', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...createAuthHeaders(token)
+    },
+    body: JSON.stringify(payload)
+  });
+}
+
+/**
+ * @param {string} token
+ * @param {number | string} bookingId
+ * @returns {Promise<ApiPayload>}
+ */
+export async function cancelBooking(token, bookingId) {
+  return apiFetch(`/bookings/${bookingId}/cancel`, {
+    method: 'POST',
+    headers: createAuthHeaders(token)
+  });
+}

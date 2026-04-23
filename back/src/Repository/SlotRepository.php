@@ -48,4 +48,15 @@ class SlotRepository extends ServiceEntityRepository
             ->getQuery()
             ->getResult();
     }
+
+    public function findOneWithExperience(int $id): ?Slot
+    {
+        return $this->createQueryBuilder('s')
+            ->join('s.experience', 'e')
+            ->addSelect('e')
+            ->where('s.id = :id')
+            ->setParameter('id', $id)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
 }

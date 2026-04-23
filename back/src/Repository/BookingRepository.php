@@ -87,4 +87,22 @@ class BookingRepository extends ServiceEntityRepository
             ->getQuery()
             ->getSingleScalarResult();
     }
+
+    public function findDetailedByIdForUser(int $id, User $user): ?Booking
+    {
+        return $this->createQueryBuilder('b')
+            ->join('b.slot', 's')
+            ->addSelect('s')
+            ->join('s.experience', 'e')
+            ->addSelect('e')
+            ->leftJoin('b.payments', 'p')
+            ->addSelect('p')
+            ->where('b.id = :id')
+            ->andWhere('b.user = :user')
+            ->setParameter('id', $id)
+            ->setParameter('user', $user)
+            ->orderBy('p.createdAt', 'DESC')
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
 }

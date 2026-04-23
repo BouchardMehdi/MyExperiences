@@ -15,6 +15,9 @@ Le backend `back/` est maintenant fige sur une base API-first.
   - `POST /api/auth/login`
   - `POST /api/auth/logout`
   - `GET /api/me`
+  - `GET /api/bookings`
+  - `POST /api/bookings`
+  - `POST /api/bookings/{id}/cancel`
 
 ## Briques conservees pour la suite
 
@@ -40,3 +43,4 @@ Le backend `back/` est maintenant fige sur une base API-first.
 - les futurs besoins d'authentification seront branches sur le firewall `main`
 - l'API experiences publique accepte les filtres `location`, `maxPrice` et `date`
 - l'authentification API utilise des jetons Bearer persistants stockes dans `api_token`
+- les reservations sont protegees par l'auth Bearer et gerees en transaction Doctrine
