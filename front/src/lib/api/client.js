@@ -328,3 +328,71 @@ export async function deleteOrganizerSlot(token, slotId) {
     headers: createAuthHeaders(token)
   });
 }
+
+/**
+ * @param {string} token
+ * @returns {Promise<ApiPayload>}
+ */
+export async function fetchAdminDashboard(token) {
+  return apiFetch('/admin/dashboard', {
+    headers: createAuthHeaders(token)
+  });
+}
+
+/**
+ * @param {string} token
+ * @param {number | string} userId
+ * @param {Record<string, unknown>} payload
+ * @returns {Promise<ApiPayload>}
+ */
+export async function updateAdminUser(token, userId, payload) {
+  return apiFetch(`/admin/users/${userId}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      ...createAuthHeaders(token)
+    },
+    body: JSON.stringify(payload)
+  });
+}
+
+/**
+ * @param {string} token
+ * @param {number | string} experienceId
+ * @param {Record<string, unknown>} payload
+ * @returns {Promise<ApiPayload>}
+ */
+export async function updateAdminExperience(token, experienceId, payload) {
+  return apiFetch(`/admin/experiences/${experienceId}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      ...createAuthHeaders(token)
+    },
+    body: JSON.stringify(payload)
+  });
+}
+
+/**
+ * @param {string} token
+ * @param {number | string} experienceId
+ * @returns {Promise<ApiPayload>}
+ */
+export async function deleteAdminExperience(token, experienceId) {
+  return apiFetch(`/admin/experiences/${experienceId}`, {
+    method: 'DELETE',
+    headers: createAuthHeaders(token)
+  });
+}
+
+/**
+ * @param {string} token
+ * @param {number | string} reviewId
+ * @returns {Promise<ApiPayload>}
+ */
+export async function deleteAdminReview(token, reviewId) {
+  return apiFetch(`/admin/reviews/${reviewId}`, {
+    method: 'DELETE',
+    headers: createAuthHeaders(token)
+  });
+}

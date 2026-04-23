@@ -29,4 +29,36 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
         $this->getEntityManager()->persist($user);
         $this->getEntityManager()->flush();
     }
+
+    /**
+     * @return list<User>
+     */
+    public function findAllDetailed(): array
+    {
+        return $this->createQueryBuilder('u')
+            ->leftJoin('u.experiences', 'e')
+            ->addSelect('e')
+            ->leftJoin('u.bookings', 'b')
+            ->addSelect('b')
+            ->leftJoin('u.reviews', 'r')
+            ->addSelect('r')
+            ->orderBy('u.createdAt', 'DESC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    public function findDetailedById(int $id): ?User
+    {
+        return $this->createQueryBuilder('u')
+            ->leftJoin('u.experiences', 'e')
+            ->addSelect('e')
+            ->leftJoin('u.bookings', 'b')
+            ->addSelect('b')
+            ->leftJoin('u.reviews', 'r')
+            ->addSelect('r')
+            ->where('u.id = :id')
+            ->setParameter('id', $id)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
 }

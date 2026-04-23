@@ -63,6 +63,17 @@
 
     return user.roles.includes('ROLE_ORGANIZER') || user.roles.includes('ROLE_ADMIN');
   }
+
+  /**
+   * @param {Record<string, any> | null | undefined} user
+   */
+  function isAdminUser(user) {
+    if (!user || !Array.isArray(user.roles)) {
+      return false;
+    }
+
+    return user.roles.includes('ROLE_ADMIN');
+  }
 </script>
 
 <svelte:head>
@@ -87,6 +98,9 @@
       <a href={`${base}/experiences`}>Experiences</a>
 
       {#if $authSession.user}
+        {#if isAdminUser($authSession.user)}
+          <a href={`${base}/admin`}>Admin</a>
+        {/if}
         {#if isOrganizerUser($authSession.user)}
           <a href={`${base}/organizer`}>Organisateur</a>
         {/if}

@@ -58,6 +58,11 @@ Le backend Symfony est organise dans `back/` et expose actuellement :
 - `PATCH /api/organizer/slots/{id}`
 - `DELETE /api/organizer/slots/{id}`
 - `GET /api/organizer/bookings`
+- `GET /api/admin/dashboard`
+- `PATCH /api/admin/users/{id}`
+- `PATCH /api/admin/experiences/{id}`
+- `DELETE /api/admin/experiences/{id}`
+- `DELETE /api/admin/reviews/{id}`
 
 La base Doctrine/PostgreSQL est prete pour evoluer avec migrations et logique metier. La couche web Twig obsolete a ete retiree pour garder un backend API-first plus propre.
 

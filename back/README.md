@@ -29,6 +29,11 @@ Le backend `back/` est maintenant fige sur une base API-first.
   - `PATCH /api/organizer/slots/{id}`
   - `DELETE /api/organizer/slots/{id}`
   - `GET /api/organizer/bookings`
+  - `GET /api/admin/dashboard`
+  - `PATCH /api/admin/users/{id}`
+  - `PATCH /api/admin/experiences/{id}`
+  - `DELETE /api/admin/experiences/{id}`
+  - `DELETE /api/admin/reviews/{id}`
 
 ## Briques conservees pour la suite
 
@@ -58,3 +63,4 @@ Le backend `back/` est maintenant fige sur une base API-first.
 - le paiement mock est expose sur les reservations avec simulation `success` ou `failure`
 - les avis sont limites a un par utilisateur et ne sont autorises qu'apres participation payee
 - l'espace organisateur permet de gerer experiences, creneaux et reservations depuis `/api/organizer/*`
+- l'espace admin permet de gerer utilisateurs, experiences et moderation des avis depuis `/api/admin/*`

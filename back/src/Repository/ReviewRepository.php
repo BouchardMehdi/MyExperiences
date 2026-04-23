@@ -46,4 +46,32 @@ class ReviewRepository extends ServiceEntityRepository
             ->getQuery()
             ->getOneOrNullResult();
     }
+
+    /**
+     * @return list<Review>
+     */
+    public function findAllDetailed(): array
+    {
+        return $this->createQueryBuilder('r')
+            ->join('r.user', 'u')
+            ->addSelect('u')
+            ->join('r.experience', 'e')
+            ->addSelect('e')
+            ->orderBy('r.createdAt', 'DESC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    public function findDetailedById(int $id): ?Review
+    {
+        return $this->createQueryBuilder('r')
+            ->join('r.user', 'u')
+            ->addSelect('u')
+            ->join('r.experience', 'e')
+            ->addSelect('e')
+            ->where('r.id = :id')
+            ->setParameter('id', $id)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
 }

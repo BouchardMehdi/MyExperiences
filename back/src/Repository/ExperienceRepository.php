@@ -114,4 +114,36 @@ class ExperienceRepository extends ServiceEntityRepository
             ->getQuery()
             ->getOneOrNullResult();
     }
+
+    /**
+     * @return list<Experience>
+     */
+    public function findAllDetailed(): array
+    {
+        return $this->createQueryBuilder('e')
+            ->leftJoin('e.organizer', 'o')
+            ->addSelect('o')
+            ->leftJoin('e.slots', 's')
+            ->addSelect('s')
+            ->leftJoin('e.reviews', 'r')
+            ->addSelect('r')
+            ->orderBy('e.createdAt', 'DESC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    public function findDetailedById(int $id): ?Experience
+    {
+        return $this->createQueryBuilder('e')
+            ->leftJoin('e.organizer', 'o')
+            ->addSelect('o')
+            ->leftJoin('e.slots', 's')
+            ->addSelect('s')
+            ->leftJoin('e.reviews', 'r')
+            ->addSelect('r')
+            ->where('e.id = :id')
+            ->setParameter('id', $id)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
 }
