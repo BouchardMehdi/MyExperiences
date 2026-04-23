@@ -3,28 +3,13 @@
   import { base } from '$app/paths';
   import { onMount } from 'svelte';
   import { authSession, clearAuthSession, getStoredAuthToken, updateAuthUser } from '$lib/auth/session';
-  import {
-    cancelBooking,
-    fetchCurrentUser,
-    fetchMyBookings,
-    payBooking,
-    requestOrganizerAccess
-  } from '$lib/api/client';
-  import { formatBookingStatus, formatPaymentStatus } from '$lib/utils/booking';
-  import { formatDateTime, formatPrice } from '$lib/utils/experience';
+  import { fetchCurrentUser, requestOrganizerAccess } from '$lib/api/client';
+  import { formatDateTime } from '$lib/utils/experience';
 
   let error = '';
   let isLoading = true;
   /** @type {Record<string, any> | null} */
   let currentUser = null;
-  /** @type {Array<Record<string, any>>} */
-  let bookings = [];
-  let bookingsError = '';
-  let bookingsFeedback = '';
-  /** @type {number | null} */
-  let cancellingBookingId = null;
-  /** @type {number | null} */
-  let payingBookingId = null;
   let organizerRequestMessage = '';
   let organizerRequestError = '';
   let organizerMotivation = '';
@@ -39,18 +24,13 @@
     }
 
     try {
-      const [userResponse, bookingsResponse] = await Promise.all([
-        fetchCurrentUser(token),
-        fetchMyBookings(token)
-      ]);
+      const userResponse = await fetchCurrentUser(token);
 
       if (userResponse.data && typeof userResponse.data === 'object') {
         updateAuthUser(/** @type {Record<string, unknown>} */ (userResponse.data));
       } else {
         throw new Error('La reponse utilisateur est incomplete.');
       }
-
-      bookings = Array.isArray(bookingsResponse.data) ? bookingsResponse.data : [];
     } catch (exception) {
       clearAuthSession();
       error = exception instanceof Error ? exception.message : 'Erreur inconnue.';
@@ -75,72 +55,12 @@
     return currentUser?.organizerRequest?.status || null;
   }
 
-  /**
-   * @param {number} bookingId
-   */
-  async function handleCancelBooking(bookingId) {
-    const token = getStoredAuthToken();
-
-    if (!token) {
-      await goto(`${base}/login`);
-      return;
-    }
-
-    cancellingBookingId = bookingId;
-    bookingsError = '';
-    bookingsFeedback = '';
-
-    try {
-      const response = await cancelBooking(token, bookingId);
-      const updatedBooking = response.data && typeof response.data === 'object' ? response.data : null;
-
-      if (!updatedBooking) {
-        throw new Error("La reponse d'annulation est incomplete.");
-      }
-
-      bookings = bookings.map((booking) => (booking.id === bookingId ? updatedBooking : booking));
-      bookingsFeedback = 'La reservation a bien ete annulee.';
-    } catch (exception) {
-      bookingsError = exception instanceof Error ? exception.message : 'Erreur inconnue.';
-    } finally {
-      cancellingBookingId = null;
-    }
-  }
-
-  /**
-   * @param {number} bookingId
-   * @param {'success' | 'failure'} outcome
-   */
-  async function handlePayBooking(bookingId, outcome) {
-    const token = getStoredAuthToken();
-
-    if (!token) {
-      await goto(`${base}/login`);
-      return;
-    }
-
-    payingBookingId = bookingId;
-    bookingsError = '';
-    bookingsFeedback = '';
-
-    try {
-      const response = await payBooking(token, bookingId, outcome);
-      const updatedBooking = response.data && typeof response.data === 'object' ? response.data : null;
-
-      if (!updatedBooking) {
-        throw new Error('La reponse de paiement est incomplete.');
-      }
-
-      bookings = bookings.map((booking) => (booking.id === bookingId ? updatedBooking : booking));
-      bookingsFeedback =
-        outcome === 'failure'
-          ? 'Le paiement mock a echoue et la reservation a ete annulee.'
-          : 'Le paiement mock a ete valide avec succes.';
-    } catch (exception) {
-      bookingsError = exception instanceof Error ? exception.message : 'Erreur inconnue.';
-    } finally {
-      payingBookingId = null;
-    }
+  function isAdminUser() {
+    return !!(
+      currentUser &&
+      Array.isArray(currentUser.roles) &&
+      currentUser.roles.includes('ROLE_ADMIN')
+    );
   }
 
   async function handleOrganizerRequest() {
@@ -186,17 +106,23 @@
 {:else if currentUser}
   <section class="account-shell">
     <div class="account-hero">
-      <span class="eyebrow">Espace personnel</span>
-      <h1>{currentUser.fullName || 'Compte MyExperiences'}</h1>
-      <p>
-        Votre session API Bearer est active. Vous pouvez maintenant suivre vos reservations et
-        annuler une reservation encore active depuis cet espace.
-      </p>
+      <div>
+        <span class="eyebrow">Mon compte</span>
+        <h1>{currentUser.fullName || 'Compte MyExperiences'}</h1>
+        <p>
+          Retrouvez ici vos informations principales et votre acces organisateur. Les reservations
+          et l activite sont maintenant centralisees dans <a href={`${base}/space`}>Mon espace</a>.
+        </p>
+      </div>
+
+      <a class="space-link" href={`${base}/space`}>Ouvrir mon espace</a>
     </div>
 
     <div class="details-grid">
       <article class="panel">
-        <span class="eyebrow">Profil</span>
+        <span class="eyebrow soft">Profil</span>
+        <h2>Informations du compte</h2>
+
         <dl>
           <div>
             <dt>Email</dt>
@@ -217,137 +143,69 @@
         </dl>
       </article>
 
-      <article class="panel">
-        <span class="eyebrow">Organisateur</span>
-        <h2>Acces organisateur</h2>
+      {#if isOrganizerUser()}
+        <article class="panel">
+          <span class="eyebrow soft">{isAdminUser() ? 'Administration' : 'Organisateur'}</span>
+          <h2>{isAdminUser() ? 'Acces admin actif' : 'Acces organisateur actif'}</h2>
 
-        {#if organizerRequestError}
-          <p class="inline-error">{organizerRequestError}</p>
-        {/if}
-
-        {#if organizerRequestMessage}
-          <p class="inline-success">{organizerRequestMessage}</p>
-        {/if}
-
-        {#if isOrganizerUser()}
-          <p class="empty">Votre compte dispose deja de l'acces organisateur.</p>
-        {:else if getOrganizerRequestStatus() === 'PENDING'}
-          <p class="empty">
-            Votre demande est en attente de validation par un administrateur depuis
-            {formatDateTime(currentUser.organizerRequest?.createdAt)}.
+          <p>
+            {#if isAdminUser()}
+              Votre compte dispose des acces administrateur et organisateur. Vous pouvez gerer la
+              plateforme, moderer les contenus et publier des experiences.
+            {:else}
+              Votre compte peut deja publier et gerer des experiences, tout en conservant vos usages
+              classiques de participant.
+            {/if}
           </p>
-        {:else if getOrganizerRequestStatus() === 'APPROVED'}
-          <p class="empty">Votre demande a ete approuvee. Rechargez la session si besoin pour voir l'acces organisateur.</p>
-        {:else}
-          {#if getOrganizerRequestStatus() === 'REJECTED'}
-            <p class="empty">
-              Votre precedente demande a ete refusee. Vous pouvez soumettre une nouvelle demande avec plus de contexte.
-            </p>
+
+          <div class="action-stack">
+            <a class="space-link" href={`${base}/space`}>Voir mon activite</a>
+            <a class="secondary-link" href={`${base}/organizer`}>Ouvrir l espace organisateur</a>
+            {#if isAdminUser()}
+              <a class="secondary-link" href={`${base}/admin`}>Ouvrir l espace admin</a>
+            {/if}
+          </div>
+        </article>
+      {:else}
+        <article class="panel">
+          <span class="eyebrow soft">Organisateur</span>
+          <h2>Demande d acces organisateur</h2>
+
+          {#if organizerRequestError}
+            <p class="inline-error">{organizerRequestError}</p>
           {/if}
 
-          <form class="request-form" on:submit|preventDefault={handleOrganizerRequest}>
-            <label>
-              <span>Pourquoi souhaitez-vous devenir organisateur ?</span>
-              <textarea bind:value={organizerMotivation} minlength="20" rows="5"></textarea>
-            </label>
+          {#if organizerRequestMessage}
+            <p class="inline-success">{organizerRequestMessage}</p>
+          {/if}
 
-            <button class="primary-action" disabled={isSubmittingOrganizerRequest} type="submit">
-              {isSubmittingOrganizerRequest ? 'Envoi...' : 'Envoyer ma demande'}
-            </button>
-          </form>
-        {/if}
-      </article>
+          {#if getOrganizerRequestStatus() === 'PENDING'}
+            <p class="empty">
+              Votre demande est en attente depuis {formatDateTime(currentUser.organizerRequest?.createdAt)}.
+              Un administrateur doit encore la valider.
+            </p>
+          {:else if getOrganizerRequestStatus() === 'APPROVED'}
+            <p class="empty">Votre demande a ete approuvee. Reconnectez-vous si l acces n apparait pas encore partout.</p>
+          {:else}
+            {#if getOrganizerRequestStatus() === 'REJECTED'}
+              <p class="empty">
+                Votre precedente demande a ete refusee. Vous pouvez en envoyer une nouvelle avec plus de contexte.
+              </p>
+            {/if}
 
-      <article class="panel">
-        <span class="eyebrow">Reservations</span>
-        <h2>Mes reservations</h2>
+            <form class="request-form" on:submit|preventDefault={handleOrganizerRequest}>
+              <label>
+                <span>Pourquoi souhaitez-vous devenir organisateur ?</span>
+                <textarea bind:value={organizerMotivation} minlength="20" rows="6"></textarea>
+              </label>
 
-        {#if bookingsError}
-          <p class="inline-error">{bookingsError}</p>
-        {/if}
-
-        {#if bookingsFeedback}
-          <p class="inline-success">{bookingsFeedback}</p>
-        {/if}
-
-        {#if bookings.length}
-          <div class="booking-list">
-            {#each bookings as booking (booking.id)}
-              <article class="booking-card">
-                <header>
-                  <div>
-                    <strong>{booking.experience?.title || 'Experience'}</strong>
-                    <small>{booking.experience?.location || 'Lieu a confirmer'}</small>
-                  </div>
-                  <span class:cancelled={booking.status === 'CANCELLED'} class="status-badge">
-                    {formatBookingStatus(booking.status)}
-                  </span>
-                </header>
-
-                <dl>
-                  <div>
-                    <dt>Creneau</dt>
-                    <dd>{formatDateTime(booking.slot?.startAt)}</dd>
-                  </div>
-                  <div>
-                    <dt>Places</dt>
-                    <dd>{booking.seats}</dd>
-                  </div>
-                  <div>
-                    <dt>Total</dt>
-                    <dd>{formatPrice(booking.totalPrice)}</dd>
-                  </div>
-                  <div>
-                    <dt>Statut paiement</dt>
-                    <dd>{formatPaymentStatus(booking.latestPayment?.status)}</dd>
-                  </div>
-                </dl>
-
-                {#if booking.latestPayment}
-                  <p class="payment-details">
-                    Ref {booking.latestPayment.transactionRef || 'mock'} · {booking.latestPayment.provider || 'mock'} · {formatPrice(booking.latestPayment.amount)}
-                  </p>
-                {/if}
-
-                {#if booking.canPay}
-                  <div class="action-row">
-                    <button
-                      class="primary-action"
-                      disabled={payingBookingId === booking.id || cancellingBookingId === booking.id}
-                      on:click={() => handlePayBooking(booking.id, 'success')}
-                      type="button"
-                    >
-                      {payingBookingId === booking.id ? 'Traitement...' : 'Payer (mock)'}
-                    </button>
-
-                    <button
-                      class="secondary ghost"
-                      disabled={payingBookingId === booking.id || cancellingBookingId === booking.id}
-                      on:click={() => handlePayBooking(booking.id, 'failure')}
-                      type="button"
-                    >
-                      Simuler un echec
-                    </button>
-                  </div>
-                {/if}
-
-                {#if booking.canCancel}
-                  <button
-                    class="secondary"
-                    disabled={cancellingBookingId === booking.id || payingBookingId === booking.id}
-                    on:click={() => handleCancelBooking(booking.id)}
-                    type="button"
-                  >
-                    {cancellingBookingId === booking.id ? 'Annulation...' : 'Annuler'}
-                  </button>
-                {/if}
-              </article>
-            {/each}
-          </div>
-        {:else}
-          <p class="empty">Aucune reservation pour le moment. Vous pouvez commencer depuis la page detail d'une experience.</p>
-        {/if}
-      </article>
+              <button class="primary-action" disabled={isSubmittingOrganizerRequest} type="submit">
+                {isSubmittingOrganizerRequest ? 'Envoi...' : 'Envoyer ma demande'}
+              </button>
+            </form>
+          {/if}
+        </article>
+      {/if}
     </div>
   </section>
 {/if}
@@ -364,34 +222,48 @@
   .status-panel {
     padding: 1.5rem;
     border-radius: 1.8rem;
-    background: rgba(255, 252, 248, 0.88);
-    border: 1px solid rgba(139, 95, 61, 0.12);
-    box-shadow: 0 20px 60px rgba(88, 54, 30, 0.08);
+    background: rgba(255, 251, 246, 0.84);
+    border: 1px solid rgba(112, 71, 45, 0.12);
+    box-shadow: 0 24px 70px rgba(66, 40, 19, 0.08);
+  }
+
+  .account-hero {
+    display: flex;
+    justify-content: space-between;
+    align-items: end;
+    gap: 1rem;
   }
 
   .details-grid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 1rem;
   }
 
   .eyebrow {
-    display: inline-block;
-    margin-bottom: 0.8rem;
+    display: inline-flex;
+    align-items: center;
+    min-height: 2rem;
+    margin-bottom: 0.75rem;
     padding: 0.38rem 0.8rem;
     border-radius: 999px;
-    background: rgba(230, 205, 180, 0.42);
-    color: #875a39;
+    background: rgba(235, 203, 178, 0.28);
+    color: #8a5b3b;
     font-size: 0.78rem;
     text-transform: uppercase;
     letter-spacing: 0.1em;
     font-weight: 700;
   }
 
+  .eyebrow.soft {
+    background: rgba(225, 210, 194, 0.38);
+    color: #7b604d;
+  }
+
   h1,
   h2 {
     margin: 0;
-    font-family: Georgia, 'Times New Roman', serif;
+    font-family: 'Constantia', Georgia, serif;
     color: #24160e;
   }
 
@@ -401,18 +273,50 @@
   }
 
   h2 {
-    font-size: clamp(1.5rem, 3vw, 2rem);
+    font-size: clamp(1.45rem, 3vw, 2rem);
   }
 
   p {
-    line-height: 1.75;
+    line-height: 1.72;
     color: #5f5146;
+  }
+
+  p a {
+    color: #8a4326;
+    font-weight: 700;
+  }
+
+  .space-link,
+  .primary-action,
+  .secondary-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 3rem;
+    padding: 0.8rem 1rem;
+    border-radius: 999px;
+    text-decoration: none;
+    border: 0;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .space-link,
+  .primary-action {
+    background: #8d5430;
+    color: #fff9f1;
+  }
+
+  .secondary-link {
+    background: rgba(243, 230, 217, 0.92);
+    color: #734d36;
   }
 
   dl {
     display: grid;
     gap: 0.9rem;
-    margin: 0;
+    margin: 1rem 0 0;
   }
 
   dt {
@@ -429,107 +333,17 @@
     font-weight: 700;
   }
 
-  .booking-list {
-    display: grid;
-    gap: 0.9rem;
-    margin-top: 1rem;
-  }
-
-  .booking-card {
-    padding: 1rem;
-    border-radius: 1.2rem;
-    background: rgba(255, 255, 255, 0.84);
-    border: 1px solid rgba(143, 108, 82, 0.12);
-  }
-
-  .booking-card header {
-    display: flex;
-    justify-content: space-between;
-    gap: 1rem;
-    align-items: start;
-    margin-bottom: 0.8rem;
-  }
-
-  .booking-card strong {
-    color: #24160e;
-    font-size: 1.05rem;
-  }
-
-  .booking-card small {
-    display: block;
-    margin-top: 0.25rem;
-    color: #7a6555;
-  }
-
-  .status-badge {
-    padding: 0.45rem 0.8rem;
-    border-radius: 999px;
-    background: rgba(255, 224, 176, 0.7);
-    color: #7f5a1d;
-    font-weight: 700;
-  }
-
-  .status-badge.cancelled {
-    background: rgba(238, 211, 211, 0.75);
-    color: #95433b;
-  }
-
-  .secondary {
-    margin-top: 0.9rem;
-    min-height: 2.8rem;
-    padding: 0.75rem 1rem;
-    border: 0;
-    border-radius: 999px;
-    background: rgba(240, 229, 219, 0.95);
-    color: #6d5341;
-    font: inherit;
-    font-weight: 700;
-    cursor: pointer;
-  }
-
-  .primary-action {
-    min-height: 2.8rem;
-    padding: 0.75rem 1rem;
-    border: 0;
-    border-radius: 999px;
-    background: #8d5430;
-    color: #fff9f1;
-    font: inherit;
-    font-weight: 700;
-    cursor: pointer;
-  }
-
-  .action-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.75rem;
-    margin-top: 0.9rem;
-  }
-
-  .ghost {
-    background: rgba(255, 244, 241, 0.92);
-    color: #8a473f;
-  }
-
-  .secondary:disabled,
-  .primary-action:disabled {
-    opacity: 0.7;
-    cursor: wait;
-  }
-
-  .payment-details {
-    margin-top: 0.9rem;
-    padding: 0.85rem 1rem;
-    border-radius: 1rem;
-    background: rgba(255, 255, 255, 0.86);
-    border: 1px solid rgba(143, 108, 82, 0.12);
-    color: #6d5341;
-  }
-
   .request-form {
     display: grid;
     gap: 0.8rem;
     margin-top: 1rem;
+  }
+
+  .action-stack {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 1.1rem;
   }
 
   .request-form label {
@@ -546,7 +360,7 @@
   }
 
   .request-form textarea {
-    min-height: 8rem;
+    min-height: 9rem;
     padding: 0.8rem 1rem;
     border-radius: 1rem;
     border: 1px solid rgba(143, 108, 82, 0.22);
@@ -559,22 +373,20 @@
   .inline-error,
   .inline-success,
   .status-panel.error {
+    padding: 0.9rem 1rem;
+    border-radius: 1rem;
+  }
+
+  .inline-error,
+  .status-panel.error {
     color: #9c2f20;
-    border-color: rgba(156, 47, 32, 0.16);
+    border: 1px solid rgba(156, 47, 32, 0.16);
     background: rgba(255, 244, 241, 0.92);
   }
 
-  .inline-error {
-    margin: 1rem 0 0;
-    padding: 0.9rem 1rem;
-    border-radius: 1rem;
-    border: 1px solid rgba(156, 47, 32, 0.16);
-  }
-
   .inline-success {
-    margin: 1rem 0 0;
     color: #1f7e5c;
-    border-color: rgba(31, 126, 92, 0.16);
+    border: 1px solid rgba(31, 126, 92, 0.16);
     background: rgba(234, 247, 239, 0.92);
   }
 
@@ -587,8 +399,14 @@
   }
 
   @media (max-width: 900px) {
+    .account-hero,
     .details-grid {
       grid-template-columns: 1fr;
+    }
+
+    .account-hero {
+      flex-direction: column;
+      align-items: start;
     }
   }
 </style>

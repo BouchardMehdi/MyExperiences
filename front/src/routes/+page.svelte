@@ -1,6 +1,7 @@
 <script>
   import { base } from '$app/paths';
   import { onMount } from 'svelte';
+  import { authSession } from '$lib/auth/session';
   import ExperienceCard from '$lib/components/ExperienceCard.svelte';
   import { fetchExperiences } from '$lib/api/client';
 
@@ -19,46 +20,79 @@
       isLoading = false;
     }
   });
+
+  $: isLoggedIn = !!$authSession.user;
+  $: primaryHref = isLoggedIn ? `${base}/space` : `${base}/experiences`;
+  $: primaryLabel = isLoggedIn ? 'Ouvrir mon espace' : 'Explorer les experiences';
+  $: secondaryHref = isLoggedIn ? `${base}/account` : `${base}/register`;
+  $: secondaryLabel = isLoggedIn ? 'Voir mon compte' : 'Creer un compte';
 </script>
 
 <svelte:head>
-  <title>MyExperiences | Accueil</title>
+  <title>MyExperiences | Experiences a vivre</title>
 </svelte:head>
 
 <section class="hero">
   <div class="hero-copy">
-    <span class="eyebrow">Selection publique</span>
-    <h1>Des experiences pensees pour etre reservees simplement, sans friction.</h1>
+    <span class="eyebrow">Collection d experiences</span>
+    <h1>Des sorties, ateliers et moments rares a reserver sans friction.</h1>
     <p>
-      MyExperiences rassemble des ateliers, sorties et formats premium dans une interface
-      claire. On commence ici par la vitrine publique avant d'ajouter l'authentification et la
-      reservation complete.
+      MyExperiences aide a trouver une activite qui donne envie de sortir de chez soi, puis a la
+      reserver dans un parcours simple. On met en avant des formats humains, des creneaux clairs
+      et une experience fluide du premier clic jusqu au jour J.
     </p>
 
     <div class="hero-actions">
-      <a class="primary" href={`${base}/experiences`}>Explorer les experiences</a>
-      <a class="secondary" href={`${base}/register`}>Creer un compte</a>
+      <a class="primary" href={primaryHref}>{primaryLabel}</a>
+      <a class="secondary" href={secondaryHref}>{secondaryLabel}</a>
+      {#if !isLoggedIn}
+        <a class="tertiary" href={`${base}/login`}>Se connecter</a>
+      {/if}
     </div>
   </div>
 
   <aside class="hero-panel">
-    <div>
-      <strong>Ce qu'on a deja</strong>
-      <p>API experiences publique, auth Bearer, detail riche et navigation front sous sous-chemin.</p>
-    </div>
-    <div>
-      <strong>Ce qui vient ensuite</strong>
-      <p>Reservation transactionnelle, paiement mock et espace utilisateur enrichi.</p>
-    </div>
+    <article>
+      <strong>Ce que l on propose</strong>
+      <p>Des experiences publiees avec prix, disponibilites, avis et reservation en ligne.</p>
+    </article>
+    <article>
+      <strong>Pour qui</strong>
+      <p>Des curieux, des voyageurs de proximite et des organisateurs qui veulent remplir leurs creneaux.</p>
+    </article>
+    <article>
+      <strong>Pourquoi maintenant</strong>
+      <p>Parce qu une bonne idee sortie doit se reserver aussi facilement qu elle se raconte.</p>
+    </article>
   </aside>
+</section>
+
+<section class="promise-grid">
+  <article class="promise-card">
+    <span class="eyebrow soft">Simple</span>
+    <h2>Une vitrine claire pour choisir vite</h2>
+    <p>Lieu, prix, date, description, avis et prochains creneaux sont lisibles sans parcourir dix pages.</p>
+  </article>
+
+  <article class="promise-card highlight">
+    <span class="eyebrow soft">Fiable</span>
+    <h2>Un parcours complet de la reservation au paiement</h2>
+    <p>Compte personnel, suivi des reservations, paiements mock et futur espace organisateur avancent sur la meme base.</p>
+  </article>
+
+  <article class="promise-card">
+    <span class="eyebrow soft">Humain</span>
+    <h2>Des formats qui donnent envie de sortir pour de vrai</h2>
+    <p>Ateliers, degustations, balades et experiences intimistes porteuses de souvenirs, pas juste de remplissage.</p>
+  </article>
 </section>
 
 <section class="section-head">
   <div>
-    <span class="eyebrow">A la une</span>
-    <h2>Experiences publiees</h2>
+    <span class="eyebrow">A decouvrir</span>
+    <h2>Experiences mises en avant</h2>
   </div>
-  <a class="section-link" href={`${base}/experiences`}>Tout voir</a>
+  <a class="section-link" href={`${base}/experiences`}>Voir tout le catalogue</a>
 </section>
 
 {#if isLoading}
@@ -75,79 +109,88 @@
   </section>
 {/if}
 
-<section class="footer-banner">
+<section class="cta-banner">
   <div>
-    <span class="eyebrow">Navigation</span>
-    <h2>Une base propre pour la suite du produit.</h2>
+    <span class="eyebrow">Passer a l action</span>
+    <h2>Choisis une experience maintenant, complete ton compte ensuite.</h2>
     <p>
-      On a maintenant une home qui raconte le produit et une API experiences exploitable par le
-      front. La prochaine couche pourra se brancher sans refaire cette structure.
+      La page catalogue reste le meilleur point d entree pour tester le produit, filtrer les propositions
+      et ouvrir les details avant de reserver.
     </p>
   </div>
-  <a class="primary" href={`${base}/experiences`}>Ouvrir la liste complete</a>
+
+  <div class="cta-actions">
+    <a class="primary" href={`${base}/experiences`}>Aller aux experiences</a>
+    {#if isLoggedIn}
+      <a class="secondary" href={`${base}/space`}>Retrouver mes reservations</a>
+    {:else}
+      <a class="secondary" href={`${base}/register`}>Creer mon compte</a>
+    {/if}
+  </div>
 </section>
 
 <style>
-  .hero,
-  .footer-banner {
-    display: grid;
-    grid-template-columns: minmax(0, 2.1fr) minmax(280px, 1fr);
-    gap: 1.2rem;
-    align-items: stretch;
-  }
-
   .hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1.8fr) minmax(320px, 1fr);
+    gap: 1rem;
     margin-top: 1rem;
-    margin-bottom: 2.1rem;
   }
 
   .hero-copy,
   .hero-panel,
-  .footer-banner {
+  .promise-card,
+  .cta-banner,
+  .status-panel {
     border-radius: 2rem;
-    border: 1px solid rgba(144, 95, 60, 0.12);
-    box-shadow: 0 25px 70px rgba(89, 56, 31, 0.08);
+    border: 1px solid rgba(112, 71, 45, 0.12);
+    box-shadow: 0 24px 70px rgba(66, 40, 19, 0.08);
   }
 
   .hero-copy {
-    padding: clamp(1.6rem, 4vw, 3rem);
+    padding: clamp(1.8rem, 4vw, 3.3rem);
     background:
-      linear-gradient(135deg, rgba(112, 59, 25, 0.95), rgba(175, 95, 53, 0.88)),
-      #8e4f2c;
+      radial-gradient(circle at top right, rgba(255, 210, 175, 0.24), transparent 32%),
+      linear-gradient(140deg, #4d2f23 0%, #8f4e2e 52%, #cc7a45 100%);
     color: #fff8f2;
   }
 
   .hero-panel {
     display: grid;
-    gap: 1rem;
-    padding: 1.4rem;
-    background: rgba(255, 250, 245, 0.84);
+    gap: 0.85rem;
+    padding: 1rem;
+    background: rgba(255, 251, 246, 0.82);
+    backdrop-filter: blur(12px);
   }
 
-  .hero-panel div,
-  .footer-banner div {
+  .hero-panel article,
+  .cta-banner div {
     padding: 1rem 1.1rem;
-    border-radius: 1.2rem;
-    background: rgba(255, 255, 255, 0.7);
+    border-radius: 1.3rem;
+    background: rgba(255, 255, 255, 0.72);
   }
 
-  .footer-banner {
-    margin-top: 2.2rem;
-    padding: 1.2rem;
-    background: linear-gradient(180deg, rgba(236, 245, 240, 0.9), rgba(255, 251, 247, 0.88));
+  .hero-panel strong {
+    display: block;
+    margin-bottom: 0.4rem;
+    color: #2d1b13;
   }
 
-  .eyebrow {
-    display: inline-block;
-    margin-bottom: 0.8rem;
-    padding: 0.42rem 0.8rem;
-    border-radius: 999px;
-    background: rgba(255, 248, 239, 0.16);
-    color: inherit;
-    font-size: 0.78rem;
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-    font-weight: 700;
+  .promise-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+    margin: 1.2rem 0 2rem;
+  }
+
+  .promise-card {
+    padding: 1.35rem;
+    background: rgba(255, 251, 246, 0.84);
+  }
+
+  .promise-card.highlight {
+    background:
+      linear-gradient(180deg, rgba(236, 247, 241, 0.95), rgba(255, 251, 246, 0.88));
   }
 
   .section-head {
@@ -158,27 +201,46 @@
     margin-bottom: 1rem;
   }
 
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2rem;
+    margin-bottom: 0.8rem;
+    padding: 0.38rem 0.82rem;
+    border-radius: 999px;
+    background: rgba(255, 243, 231, 0.14);
+    color: inherit;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-weight: 700;
+  }
+
+  .eyebrow.soft {
+    background: rgba(228, 199, 174, 0.32);
+    color: #905f3f;
+  }
+
   h1,
   h2 {
     margin: 0;
-    font-family: Georgia, 'Times New Roman', serif;
-    line-height: 1.04;
+    font-family: 'Constantia', Georgia, serif;
+    line-height: 1.02;
   }
 
   h1 {
-    max-width: 13ch;
-    font-size: clamp(2.6rem, 7vw, 5rem);
+    max-width: 12ch;
+    font-size: clamp(2.8rem, 7vw, 5.2rem);
   }
 
   h2 {
-    font-size: clamp(1.8rem, 4vw, 2.8rem);
-    color: #24160e;
+    font-size: clamp(1.8rem, 3vw, 2.6rem);
+    color: #231710;
   }
 
-  p,
-  .hero-panel p {
+  p {
     margin: 0;
-    line-height: 1.75;
+    line-height: 1.72;
     color: inherit;
   }
 
@@ -186,18 +248,20 @@
     max-width: 60ch;
     margin-top: 1rem;
     color: rgba(255, 247, 240, 0.88);
-    font-size: 1.05rem;
+    font-size: 1.03rem;
   }
 
-  .hero-actions {
+  .hero-actions,
+  .cta-actions {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.85rem;
+    gap: 0.8rem;
     margin-top: 1.5rem;
   }
 
   .primary,
   .secondary,
+  .tertiary,
   .section-link {
     display: inline-flex;
     align-items: center;
@@ -207,42 +271,68 @@
     border-radius: 999px;
     text-decoration: none;
     font-weight: 700;
+    transition:
+      transform 180ms ease,
+      box-shadow 180ms ease,
+      background 180ms ease;
+  }
+
+  .primary:hover,
+  .secondary:hover,
+  .tertiary:hover,
+  .section-link:hover {
+    transform: translateY(-1px);
   }
 
   .primary {
-    background: #fff8f1;
-    color: #7b4525;
+    background: #fff7ee;
+    color: #8a4326;
+    box-shadow: 0 16px 34px rgba(44, 21, 9, 0.18);
   }
 
   .secondary,
   .section-link {
-    background: rgba(255, 248, 239, 0.72);
-    color: #7a5337;
+    background: rgba(255, 245, 235, 0.72);
+    color: #734d36;
+  }
+
+  .tertiary {
+    border: 1px solid rgba(255, 247, 240, 0.22);
+    color: #fff7ef;
+    background: transparent;
   }
 
   .grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
     gap: 1rem;
   }
 
   .status-panel {
     padding: 1.35rem;
-    border-radius: 1.25rem;
-    background: rgba(255, 255, 255, 0.84);
-    border: 1px solid rgba(120, 90, 66, 0.12);
+    background: rgba(255, 251, 246, 0.84);
     color: #5a473a;
   }
 
   .status-panel.error {
     color: #9c2f20;
-    border-color: rgba(156, 47, 32, 0.16);
     background: rgba(255, 244, 241, 0.92);
+    border-color: rgba(156, 47, 32, 0.16);
   }
 
-  @media (max-width: 860px) {
+  .cta-banner {
+    display: grid;
+    grid-template-columns: minmax(0, 1.7fr) minmax(260px, 1fr);
+    gap: 1rem;
+    margin-top: 2rem;
+    padding: 1rem;
+    background: linear-gradient(180deg, rgba(237, 246, 241, 0.92), rgba(255, 251, 246, 0.88));
+  }
+
+  @media (max-width: 980px) {
     .hero,
-    .footer-banner {
+    .promise-grid,
+    .cta-banner {
       grid-template-columns: 1fr;
     }
   }

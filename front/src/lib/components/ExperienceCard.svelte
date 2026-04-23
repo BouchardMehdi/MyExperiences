@@ -5,18 +5,26 @@
   /** @type {any} */
   export let experience;
   export let showSummary = true;
+
+  $: reviewCount = Number(experience?.reviewSummary?.count || 0);
+  $: reviewAverage = experience?.reviewSummary?.averageRating || '0.0';
 </script>
 
 <a class="card" href={`${base}/experiences/${experience.id}`}>
-  <div class="card-top">
-    <span class="location">{experience.location}</span>
-    <span class:bookable={experience.booking?.isBookable} class="availability">
-      {experience.booking?.isBookable ? 'Reservable' : 'Complet ou a venir'}
-    </span>
+  <div class="card-image">
+    <div class="card-overlay">
+      <span class="location">{experience.location}</span>
+      <span class:bookable={experience.booking?.isBookable} class="availability">
+        {experience.booking?.isBookable ? 'Reservable' : 'A surveiller'}
+      </span>
+    </div>
   </div>
 
   <div class="card-body">
-    <h3>{experience.title}</h3>
+    <div class="headline">
+      <h3>{experience.title}</h3>
+      <span class="price">{formatPrice(experience.price)}</span>
+    </div>
 
     {#if showSummary && experience.summary}
       <p>{experience.summary}</p>
@@ -24,41 +32,36 @@
 
     <dl class="facts">
       <div>
-        <dt>Prix</dt>
-        <dd>{formatPrice(experience.price)}</dd>
-      </div>
-      <div>
         <dt>Duree</dt>
         <dd>{formatDuration(experience.durationMinutes)}</dd>
       </div>
       <div>
-        <dt>Prochain depart</dt>
+        <dt>Prochain creneau</dt>
         <dd>{formatDateTime(experience.booking?.nextStartAt)}</dd>
       </div>
-      <div>
-        <dt>Avis</dt>
-        <dd>
-          {#if experience.reviewSummary?.count}
-            {experience.reviewSummary.averageRating}/5 · {experience.reviewSummary.count}
-          {:else}
-            Aucun avis
-          {/if}
-        </dd>
-      </div>
     </dl>
+
+    <div class="footer">
+      <span class="review-pill">
+        {#if reviewCount > 0}
+          {reviewAverage}/5 - {reviewCount} avis
+        {:else}
+          Pas encore d avis
+        {/if}
+      </span>
+      <span class="cta">Voir le detail</span>
+    </div>
   </div>
 </a>
 
 <style>
   .card {
     display: grid;
-    gap: 1.2rem;
-    padding: 1.4rem;
-    border-radius: 1.5rem;
+    gap: 0;
+    border-radius: 1.65rem;
+    overflow: hidden;
     text-decoration: none;
-    background:
-      linear-gradient(180deg, rgba(255, 250, 244, 0.96), rgba(255, 255, 255, 0.9)),
-      #fff;
+    background: linear-gradient(180deg, rgba(255, 251, 246, 0.96), rgba(255, 255, 255, 0.92));
     border: 1px solid rgba(117, 74, 39, 0.12);
     box-shadow: 0 20px 50px rgba(88, 54, 30, 0.08);
     color: inherit;
@@ -69,74 +72,101 @@
   }
 
   .card:hover {
-    transform: translateY(-3px);
+    transform: translateY(-4px);
     box-shadow: 0 28px 60px rgba(88, 54, 30, 0.14);
-    border-color: rgba(195, 120, 66, 0.3);
+    border-color: rgba(195, 120, 66, 0.28);
   }
 
-  .card-top {
+  .card-image {
+    min-height: 9.8rem;
+    padding: 1rem;
+    background:
+      radial-gradient(circle at 22% 18%, rgba(255, 209, 175, 0.45), transparent 22%),
+      radial-gradient(circle at 82% 26%, rgba(169, 226, 205, 0.4), transparent 20%),
+      linear-gradient(135deg, #4e3328 0%, #8e5535 48%, #d28b53 100%);
+  }
+
+  .card-overlay {
     display: flex;
     justify-content: space-between;
     gap: 0.75rem;
-    align-items: center;
-    font-size: 0.85rem;
+    align-items: start;
+    font-size: 0.82rem;
     text-transform: uppercase;
     letter-spacing: 0.08em;
   }
 
-  .location {
-    color: #8a5a35;
+  .location,
+  .availability {
+    padding: 0.42rem 0.78rem;
+    border-radius: 999px;
     font-weight: 700;
+  }
+
+  .location {
+    background: rgba(255, 248, 241, 0.18);
+    color: #fff7ef;
   }
 
   .availability {
-    padding: 0.4rem 0.75rem;
-    border-radius: 999px;
-    background: rgba(111, 91, 74, 0.1);
-    color: #5f5248;
-    font-weight: 700;
+    background: rgba(255, 245, 236, 0.9);
+    color: #694f3d;
   }
 
   .availability.bookable {
-    background: rgba(31, 126, 92, 0.12);
+    background: rgba(223, 247, 239, 0.94);
     color: #1f7e5c;
   }
 
   .card-body {
     display: grid;
     gap: 1rem;
+    padding: 1.25rem;
+  }
+
+  .headline {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: start;
   }
 
   h3 {
     margin: 0;
-    font-family: Georgia, 'Times New Roman', serif;
-    font-size: clamp(1.35rem, 2vw, 1.7rem);
+    font-family: 'Constantia', Georgia, serif;
+    font-size: clamp(1.35rem, 2vw, 1.72rem);
     line-height: 1.1;
     color: #24160e;
+  }
+
+  .price {
+    white-space: nowrap;
+    color: #9a4e2b;
+    font-weight: 800;
   }
 
   p {
     margin: 0;
     color: #5e5147;
-    line-height: 1.65;
+    line-height: 1.68;
   }
 
   .facts {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.9rem;
+    gap: 0.8rem;
     margin: 0;
   }
 
   .facts div {
     padding: 0.9rem;
     border-radius: 1rem;
-    background: rgba(245, 238, 230, 0.75);
+    background: rgba(247, 239, 229, 0.8);
   }
 
   dt {
-    margin-bottom: 0.35rem;
-    font-size: 0.8rem;
+    margin-bottom: 0.32rem;
+    font-size: 0.78rem;
     text-transform: uppercase;
     letter-spacing: 0.08em;
     color: #8c715e;
@@ -146,7 +176,28 @@
     margin: 0;
     color: #2b211b;
     font-weight: 700;
-    line-height: 1.4;
+    line-height: 1.45;
+  }
+
+  .footer {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .review-pill {
+    padding: 0.48rem 0.8rem;
+    border-radius: 999px;
+    background: rgba(230, 205, 180, 0.28);
+    color: #724f38;
+    font-weight: 700;
+  }
+
+  .cta {
+    color: #9a4e2b;
+    font-weight: 800;
   }
 
   @media (max-width: 640px) {
