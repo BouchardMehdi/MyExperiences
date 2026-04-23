@@ -227,3 +227,104 @@ export async function createReview(token, experienceId, payload) {
     body: JSON.stringify(payload)
   });
 }
+
+/**
+ * @param {string} token
+ * @returns {Promise<ApiPayload>}
+ */
+export async function fetchOrganizerDashboard(token) {
+  return apiFetch('/organizer/dashboard', {
+    headers: createAuthHeaders(token)
+  });
+}
+
+/**
+ * @param {string} token
+ * @param {{ title: string; description: string; location: string; price: string | number; durationMinutes: string | number; status: string }} payload
+ * @returns {Promise<ApiPayload>}
+ */
+export async function createOrganizerExperience(token, payload) {
+  return apiFetch('/organizer/experiences', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...createAuthHeaders(token)
+    },
+    body: JSON.stringify(payload)
+  });
+}
+
+/**
+ * @param {string} token
+ * @param {number | string} experienceId
+ * @param {Record<string, unknown>} payload
+ * @returns {Promise<ApiPayload>}
+ */
+export async function updateOrganizerExperience(token, experienceId, payload) {
+  return apiFetch(`/organizer/experiences/${experienceId}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      ...createAuthHeaders(token)
+    },
+    body: JSON.stringify(payload)
+  });
+}
+
+/**
+ * @param {string} token
+ * @param {number | string} experienceId
+ * @returns {Promise<ApiPayload>}
+ */
+export async function deleteOrganizerExperience(token, experienceId) {
+  return apiFetch(`/organizer/experiences/${experienceId}`, {
+    method: 'DELETE',
+    headers: createAuthHeaders(token)
+  });
+}
+
+/**
+ * @param {string} token
+ * @param {number | string} experienceId
+ * @param {{ startAt: string; endAt: string; capacity: string | number; isActive: boolean }} payload
+ * @returns {Promise<ApiPayload>}
+ */
+export async function createOrganizerSlot(token, experienceId, payload) {
+  return apiFetch(`/organizer/experiences/${experienceId}/slots`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...createAuthHeaders(token)
+    },
+    body: JSON.stringify(payload)
+  });
+}
+
+/**
+ * @param {string} token
+ * @param {number | string} slotId
+ * @param {Record<string, unknown>} payload
+ * @returns {Promise<ApiPayload>}
+ */
+export async function updateOrganizerSlot(token, slotId, payload) {
+  return apiFetch(`/organizer/slots/${slotId}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      ...createAuthHeaders(token)
+    },
+    body: JSON.stringify(payload)
+  });
+}
+
+/**
+ * @param {string} token
+ * @param {number | string} slotId
+ * @returns {Promise<ApiPayload>}
+ */
+export async function deleteOrganizerSlot(token, slotId) {
+  return apiFetch(`/organizer/slots/${slotId}`, {
+    method: 'DELETE',
+    headers: createAuthHeaders(token)
+  });
+}

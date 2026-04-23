@@ -52,6 +52,17 @@
       await goto(`${base}/`);
     }
   }
+
+  /**
+   * @param {Record<string, any> | null | undefined} user
+   */
+  function isOrganizerUser(user) {
+    if (!user || !Array.isArray(user.roles)) {
+      return false;
+    }
+
+    return user.roles.includes('ROLE_ORGANIZER') || user.roles.includes('ROLE_ADMIN');
+  }
 </script>
 
 <svelte:head>
@@ -76,6 +87,9 @@
       <a href={`${base}/experiences`}>Experiences</a>
 
       {#if $authSession.user}
+        {#if isOrganizerUser($authSession.user)}
+          <a href={`${base}/organizer`}>Organisateur</a>
+        {/if}
         <a href={`${base}/account`}>Mon compte</a>
         <button on:click={handleLogout} type="button">Se deconnecter</button>
       {:else}

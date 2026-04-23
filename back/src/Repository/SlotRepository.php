@@ -59,4 +59,17 @@ class SlotRepository extends ServiceEntityRepository
             ->getQuery()
             ->getOneOrNullResult();
     }
+
+    public function findOneForOrganizer(int $id, User $organizer): ?Slot
+    {
+        return $this->createQueryBuilder('s')
+            ->join('s.experience', 'e')
+            ->addSelect('e')
+            ->where('s.id = :id')
+            ->andWhere('e.organizer = :organizer')
+            ->setParameter('id', $id)
+            ->setParameter('organizer', $organizer)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
 }

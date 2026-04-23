@@ -24,6 +24,7 @@ security:
                 failure_handler: App\Security\ApiAuthenticationFailureHandler
 
     access_control:
+        - { path: ^/api/organizer, roles: ROLE_ORGANIZER }
         - { path: ^/api/experiences/\d+/reviews$, roles: ROLE_USER }
         - { path: ^/api/me$, roles: ROLE_USER }
         - { path: ^/api/auth/logout$, roles: ROLE_USER }

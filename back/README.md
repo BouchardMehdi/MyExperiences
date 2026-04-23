@@ -20,6 +20,15 @@ Le backend `back/` est maintenant fige sur une base API-first.
   - `POST /api/bookings`
   - `POST /api/bookings/{id}/cancel`
   - `POST /api/bookings/{id}/pay`
+  - `GET /api/organizer/dashboard`
+  - `GET /api/organizer/experiences`
+  - `POST /api/organizer/experiences`
+  - `PATCH /api/organizer/experiences/{id}`
+  - `DELETE /api/organizer/experiences/{id}`
+  - `POST /api/organizer/experiences/{id}/slots`
+  - `PATCH /api/organizer/slots/{id}`
+  - `DELETE /api/organizer/slots/{id}`
+  - `GET /api/organizer/bookings`
 
 ## Briques conservees pour la suite
 
@@ -48,3 +57,4 @@ Le backend `back/` est maintenant fige sur une base API-first.
 - les reservations sont protegees par l'auth Bearer et gerees en transaction Doctrine
 - le paiement mock est expose sur les reservations avec simulation `success` ou `failure`
 - les avis sont limites a un par utilisateur et ne sont autorises qu'apres participation payee
+- l'espace organisateur permet de gerer experiences, creneaux et reservations depuis `/api/organizer/*`

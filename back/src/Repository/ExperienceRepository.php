@@ -67,6 +67,39 @@ class ExperienceRepository extends ServiceEntityRepository
             ->getResult();
     }
 
+    /**
+     * @return list<Experience>
+     */
+    public function findDetailedForOrganizer(User $organizer): array
+    {
+        return $this->createQueryBuilder('e')
+            ->distinct()
+            ->leftJoin('e.slots', 's')
+            ->addSelect('s')
+            ->leftJoin('e.reviews', 'r')
+            ->addSelect('r')
+            ->where('e.organizer = :organizer')
+            ->setParameter('organizer', $organizer)
+            ->orderBy('e.createdAt', 'DESC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    public function findOneForOrganizer(int $id, User $organizer): ?Experience
+    {
+        return $this->createQueryBuilder('e')
+            ->leftJoin('e.slots', 's')
+            ->addSelect('s')
+            ->leftJoin('e.reviews', 'r')
+            ->addSelect('r')
+            ->where('e.id = :id')
+            ->andWhere('e.organizer = :organizer')
+            ->setParameter('id', $id)
+            ->setParameter('organizer', $organizer)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
     public function findPublishedById(int $id): ?Experience
     {
         return $this->createQueryBuilder('e')
