@@ -1,0 +1,48 @@
+body {
+    background:
+        radial-gradient(circle at top right, rgba(255, 193, 7, 0.15), transparent 25%),
+        linear-gradient(180deg, #f9fafb 0%, #eef2f7 100%);
+    min-height: 100vh;
+}
+
+.navbar-brand {
+    letter-spacing: 0.04em;
+}
+
+.hero-card,
+.app-card {
+    border: 0;
+    border-radius: 1.25rem;
+    box-shadow: 0 1rem 3rem rgba(15, 23, 42, 0.08);
+}
+
+.metric-card {
+    border: 0;
+    border-radius: 1rem;
+    background: linear-gradient(135deg, #ffffff, #f4f7fb);
+    box-shadow: 0 1rem 2rem rgba(15, 23, 42, 0.07);
+}
+
+.badge-soft {
+    background-color: rgba(13, 110, 253, 0.12);
+    color: #0d6efd;
+}
+
+.section-title {
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+.payment-loader {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.35);
+    z-index: 1055;
+    align-items: center;
+    justify-content: center;
+}
+
+.payment-loader.is-visible {
+    display: flex;
+}

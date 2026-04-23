@@ -1,0 +1,35 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Avis admin | MyExperiences{% endblock %}
+
+{% block body %}
+    <section class="mb-4">
+        <h1 class="section-title mb-1">Modération des avis</h1>
+        <p class="text-muted mb-0">Supprimez les retours non conformes si nécessaire.</p>
+    </section>
+
+    <div class="row g-4">
+        {% for review in reviews %}
+            <div class="col-lg-6">
+                <div class="card app-card h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between gap-3 mb-2">
+                            <div>
+                                <h2 class="h5 mb-1">{{ review.experience.title }}</h2>
+                                <p class="text-muted small mb-0">{{ review.user.fullName }} • {{ review.createdAt|date('d/m/Y H:i') }}</p>
+                            </div>
+                            <span class="text-warning fw-semibold">{{ review.rating }}/5</span>
+                        </div>
+                        <p class="mb-3">{{ review.comment }}</p>
+                        <form method="post" action="{{ path('app_admin_review_delete', {id: review.id}) }}">
+                            <input type="hidden" name="_token" value="{{ csrf_token('delete_review_' ~ review.id) }}">
+                            <button class="btn btn-outline-danger btn-sm" type="submit">Supprimer</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <div class="col-12"><div class="alert alert-light border">Aucun avis à modérer.</div></div>
+        {% endfor %}
+    </div>
+{% endblock %}

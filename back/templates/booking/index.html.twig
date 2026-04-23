@@ -1,0 +1,58 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Mes réservations | MyExperiences{% endblock %}
+
+{% block body %}
+    <section class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="section-title mb-1">Mes réservations</h1>
+            <p class="text-muted mb-0">Retrouvez vos réservations et poursuivez le paiement mock si besoin.</p>
+        </div>
+        <a class="btn btn-outline-primary" href="{{ path('app_experience_index') }}">Réserver une expérience</a>
+    </section>
+
+    <section class="card app-card">
+        <div class="card-body p-4">
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead>
+                        <tr>
+                            <th>Expérience</th>
+                            <th>Créneau</th>
+                            <th>Places</th>
+                            <th>Statut</th>
+                            <th>Total</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for booking in bookings %}
+                            <tr>
+                                <td>{{ booking.slot.experience.title }}</td>
+                                <td>{{ booking.slot.startAt|date('d/m/Y H:i') }}</td>
+                                <td>{{ booking.seats }}</td>
+                                <td>{{ booking.status.label }}</td>
+                                <td>{{ booking.totalPrice|number_format(2, ',', ' ') }} €</td>
+                                <td class="text-end">
+                                    <div class="d-flex flex-wrap justify-content-end gap-2">
+                                        {% if booking.canBePaid %}
+                                            <a class="btn btn-sm btn-primary" href="{{ path('app_payment_show', {id: booking.id}) }}">Payer</a>
+                                        {% endif %}
+                                        {% if booking.status.value != 'CANCELLED' %}
+                                            <form method="post" action="{{ path('app_booking_cancel', {id: booking.id}) }}">
+                                                <input type="hidden" name="_token" value="{{ csrf_token('cancel_booking_' ~ booking.id) }}">
+                                                <button class="btn btn-sm btn-outline-danger" type="submit">Annuler</button>
+                                            </form>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                        {% else %}
+                            <tr><td colspan="6" class="text-muted">Vous n’avez encore aucune réservation.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+{% endblock %}

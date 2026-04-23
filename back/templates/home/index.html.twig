@@ -1,0 +1,54 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Accueil | MyExperiences{% endblock %}
+
+{% block body %}
+    <section class="card hero-card overflow-hidden mb-5">
+        <div class="row g-0 align-items-center">
+            <div class="col-lg-7 p-4 p-lg-5">
+                <span class="badge text-bg-warning text-uppercase mb-3">Projet portfolio full-stack</span>
+                <h1 class="display-5 fw-bold mb-3">Réservez des expériences mémorables, gérez-les avec une vraie logique métier.</h1>
+                <p class="lead text-muted mb-4">MyExperiences met en scène un workflow réaliste : catalogue, créneaux, réservations transactionnelles, paiement mock, rôles et dashboards.</p>
+                <div class="d-flex flex-wrap gap-3">
+                    <a class="btn btn-primary btn-lg" href="{{ path('app_experience_index') }}">Explorer les expériences</a>
+                    {% if not app.user %}
+                        <a class="btn btn-outline-dark btn-lg" href="{{ path('app_register') }}">Créer un compte</a>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-lg-5 p-4 p-lg-5 bg-dark text-white">
+                <div class="metric-card p-4 h-100 text-dark">
+                    <p class="text-muted text-uppercase small mb-2">Ce que démontre le projet</p>
+                    <ul class="mb-0 ps-3">
+                        <li>Symfony 8, Doctrine, PostgreSQL</li>
+                        <li>Rôles `USER` / `ORGANIZER` / `ADMIN`</li>
+                        <li>Réservations sécurisées par transaction</li>
+                        <li>Paiement mock avec scénarios succès/échec</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2 class="section-title mb-1">Expériences en vedette</h2>
+                <p class="text-muted mb-0">Un aperçu des activités déjà publiées.</p>
+            </div>
+            <a class="btn btn-outline-primary" href="{{ path('app_experience_index') }}">Voir tout</a>
+        </div>
+
+        <div class="row g-4">
+            {% for experience in experiences %}
+                <div class="col-md-6 col-xl-4">
+                    {% include 'partials/_experience_card.html.twig' with { experience: experience } %}
+                </div>
+            {% else %}
+                <div class="col-12">
+                    <div class="alert alert-info mb-0">Aucune expérience publiée pour le moment.</div>
+                </div>
+            {% endfor %}
+        </div>
+    </section>
+{% endblock %}
