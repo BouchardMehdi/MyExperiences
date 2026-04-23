@@ -66,4 +66,19 @@ class ExperienceRepository extends ServiceEntityRepository
             ->getQuery()
             ->getResult();
     }
+
+    public function findPublishedById(int $id): ?Experience
+    {
+        return $this->createQueryBuilder('e')
+            ->leftJoin('e.slots', 's')
+            ->addSelect('s')
+            ->leftJoin('e.reviews', 'r')
+            ->addSelect('r')
+            ->where('e.id = :id')
+            ->andWhere('e.status = :status')
+            ->setParameter('id', $id)
+            ->setParameter('status', ExperienceStatus::PUBLISHED)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
 }

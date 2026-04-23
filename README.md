@@ -38,6 +38,12 @@ Le backend Symfony est organise dans `back/` et expose actuellement :
 
 - `GET /api/health`
 - `GET /api/hello`
+- `GET /api/experiences`
+- `GET /api/experiences/{id}`
+- `POST /api/auth/register`
+- `POST /api/auth/login`
+- `POST /api/auth/logout`
+- `GET /api/me`
 
 La base Doctrine/PostgreSQL est prete pour evoluer avec migrations et logique metier. La couche web Twig obsolete a ete retiree pour garder un backend API-first plus propre.
 

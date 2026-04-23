@@ -9,6 +9,12 @@ Le backend `back/` est maintenant fige sur une base API-first.
 - endpoints actuels :
   - `GET /api/health`
   - `GET /api/hello`
+  - `GET /api/experiences`
+  - `GET /api/experiences/{id}`
+  - `POST /api/auth/register`
+  - `POST /api/auth/login`
+  - `POST /api/auth/logout`
+  - `GET /api/me`
 
 ## Briques conservees pour la suite
 
@@ -32,3 +38,5 @@ Le backend `back/` est maintenant fige sur une base API-first.
 - toute nouvelle exposition backend passe par `src/Controller/Api/`
 - les reponses doivent rester en JSON
 - les futurs besoins d'authentification seront branches sur le firewall `main`
+- l'API experiences publique accepte les filtres `location`, `maxPrice` et `date`
+- l'authentification API utilise des jetons Bearer persistants stockes dans `api_token`

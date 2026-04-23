@@ -1,0 +1,348 @@
+<script>
+  import { base } from '$app/paths';
+  import { browser } from '$app/environment';
+  import { page } from '$app/stores';
+  import { fetchExperienceById } from '$lib/api/client';
+  import { formatDateTime, formatDuration, formatPrice } from '$lib/utils/experience';
+
+  /** @type {any} */
+  let experience = null;
+  let isLoading = true;
+  let error = '';
+  let currentId = '';
+
+  $: experienceId = $page.params.id;
+
+  $: if (browser && experienceId && experienceId !== currentId) {
+    currentId = experienceId;
+    void loadExperience(experienceId);
+  }
+
+  /**
+   * @param {string} id
+   */
+  async function loadExperience(id) {
+    isLoading = true;
+    error = '';
+    experience = null;
+
+    try {
+      const response = await fetchExperienceById(id);
+      experience = response.data || null;
+    } catch (exception) {
+      error = exception instanceof Error ? exception.message : 'Erreur inconnue.';
+    } finally {
+      isLoading = false;
+    }
+  }
+</script>
+
+<svelte:head>
+  <title>{experience?.title ? `${experience.title} | MyExperiences` : 'MyExperiences | Detail experience'}</title>
+</svelte:head>
+
+<nav class="breadcrumb">
+  <a href={`${base}/`}>Accueil</a>
+  <span>/</span>
+  <a href={`${base}/experiences`}>Experiences</a>
+  {#if experience?.title}
+    <span>/</span>
+    <span>{experience.title}</span>
+  {/if}
+</nav>
+
+{#if isLoading}
+  <section class="status-panel">Chargement de l'experience...</section>
+{:else if error}
+  <section class="status-panel error">{error}</section>
+{:else if !experience}
+  <section class="status-panel">Experience introuvable.</section>
+{:else}
+  <section class="hero">
+    <div class="hero-copy">
+      <span class="eyebrow">{experience.location}</span>
+      <h1>{experience.title}</h1>
+      <p>{experience.description}</p>
+
+      <div class="chips">
+        <span>{formatPrice(experience.price)}</span>
+        <span>{formatDuration(experience.durationMinutes)}</span>
+        <span>{experience.booking?.availableSlotsCount} creneaux disponibles</span>
+        {#if experience.reviewSummary?.count}
+          <span>{experience.reviewSummary.averageRating}/5 · {experience.reviewSummary.count} avis</span>
+        {/if}
+      </div>
+    </div>
+
+    <aside class="booking-panel">
+      <strong>Reservation</strong>
+      <p>
+        {#if experience.booking?.isBookable}
+          Des creneaux sont disponibles. La reservation utilisateur sera branchee a l'etape
+          suivante.
+        {:else}
+          Aucun creneau reservable pour le moment.
+        {/if}
+      </p>
+
+      <dl>
+        <div>
+          <dt>Prochain depart</dt>
+          <dd>{formatDateTime(experience.booking?.nextStartAt)}</dd>
+        </div>
+        <div>
+          <dt>Statut</dt>
+          <dd>{experience.status}</dd>
+        </div>
+      </dl>
+    </aside>
+  </section>
+
+  <section class="content-grid">
+    <article class="panel">
+      <div class="panel-head">
+        <span class="eyebrow">Creneaux</span>
+        <h2>Disponibilites</h2>
+      </div>
+
+      {#if experience.slots?.length}
+        <div class="slot-list">
+          {#each experience.slots as slot (slot.id)}
+            <article class="slot-card">
+              <strong>{formatDateTime(slot.startAt)}</strong>
+              <p>Fin {formatDateTime(slot.endAt)}</p>
+              <div class="slot-meta">
+                <span>{slot.remainingPlaces} places restantes</span>
+                <span>{slot.capacity} places au total</span>
+              </div>
+            </article>
+          {/each}
+        </div>
+      {:else}
+        <p class="empty">Aucun creneau reservable pour l'instant.</p>
+      {/if}
+    </article>
+
+    <article class="panel">
+      <div class="panel-head">
+        <span class="eyebrow">Avis</span>
+        <h2>Derniers retours</h2>
+      </div>
+
+      {#if experience.reviews?.length}
+        <div class="review-list">
+          {#each experience.reviews as review (review.id)}
+            <article class="review-card">
+              <header>
+                <strong>{review.author?.fullName || 'Participant'}</strong>
+                <span>{review.rating}/5</span>
+              </header>
+              <p>{review.comment}</p>
+              <small>{formatDateTime(review.createdAt)}</small>
+            </article>
+          {/each}
+        </div>
+      {:else}
+        <p class="empty">Aucun avis publie pour le moment.</p>
+      {/if}
+    </article>
+  </section>
+{/if}
+
+<style>
+  .breadcrumb {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 1rem 0 1.2rem;
+    color: #7a6555;
+  }
+
+  .breadcrumb a {
+    color: inherit;
+    text-decoration: none;
+    font-weight: 700;
+  }
+
+  .hero,
+  .panel {
+    border-radius: 1.8rem;
+    border: 1px solid rgba(139, 95, 61, 0.12);
+    box-shadow: 0 20px 60px rgba(88, 54, 30, 0.08);
+    background: rgba(255, 252, 248, 0.88);
+  }
+
+  .hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1.8fr) minmax(280px, 0.9fr);
+    gap: 1rem;
+    padding: 1.35rem;
+    margin-bottom: 1.3rem;
+  }
+
+  .hero-copy,
+  .booking-panel {
+    padding: 1.1rem;
+    border-radius: 1.35rem;
+  }
+
+  .hero-copy {
+    background: linear-gradient(180deg, rgba(255, 248, 239, 0.92), rgba(255, 255, 255, 0.86));
+  }
+
+  .booking-panel {
+    background: linear-gradient(180deg, rgba(233, 245, 239, 0.95), rgba(255, 251, 247, 0.82));
+  }
+
+  .eyebrow {
+    display: inline-block;
+    margin-bottom: 0.8rem;
+    padding: 0.38rem 0.8rem;
+    border-radius: 999px;
+    background: rgba(230, 205, 180, 0.42);
+    color: #875a39;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: 700;
+  }
+
+  h1,
+  h2 {
+    margin: 0;
+    font-family: Georgia, 'Times New Roman', serif;
+    color: #24160e;
+  }
+
+  h1 {
+    font-size: clamp(2.3rem, 5vw, 4rem);
+    line-height: 1.04;
+  }
+
+  h2 {
+    font-size: clamp(1.5rem, 3vw, 2.2rem);
+  }
+
+  p {
+    margin: 1rem 0 0;
+    line-height: 1.75;
+    color: #5f5146;
+  }
+
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+    margin-top: 1.4rem;
+  }
+
+  .chips span,
+  .slot-meta span {
+    padding: 0.6rem 0.85rem;
+    border-radius: 999px;
+    background: rgba(243, 231, 220, 0.9);
+    color: #6e513e;
+    font-weight: 700;
+  }
+
+  dl {
+    display: grid;
+    gap: 0.9rem;
+    margin: 1rem 0 0;
+  }
+
+  dt {
+    margin-bottom: 0.3rem;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #7d746c;
+  }
+
+  dd {
+    margin: 0;
+    color: #2a2019;
+    font-weight: 700;
+  }
+
+  .content-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+  }
+
+  .panel {
+    padding: 1.35rem;
+  }
+
+  .panel-head {
+    margin-bottom: 1rem;
+  }
+
+  .slot-list,
+  .review-list {
+    display: grid;
+    gap: 0.9rem;
+  }
+
+  .slot-card,
+  .review-card {
+    padding: 1rem;
+    border-radius: 1.2rem;
+    background: rgba(255, 255, 255, 0.84);
+    border: 1px solid rgba(143, 108, 82, 0.12);
+  }
+
+  .slot-card strong,
+  .review-card strong {
+    color: #24160e;
+  }
+
+  .slot-card p,
+  .review-card p {
+    margin-top: 0.45rem;
+  }
+
+  .slot-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+    margin-top: 0.85rem;
+  }
+
+  .review-card header {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: center;
+  }
+
+  small {
+    display: inline-block;
+    margin-top: 0.65rem;
+    color: #816a59;
+  }
+
+  .empty,
+  .status-panel {
+    margin: 0;
+    padding: 1.2rem;
+    border-radius: 1.2rem;
+    background: rgba(255, 255, 255, 0.82);
+    color: #5f5146;
+    border: 1px solid rgba(143, 108, 82, 0.12);
+  }
+
+  .status-panel.error {
+    color: #9c2f20;
+    border-color: rgba(156, 47, 32, 0.16);
+    background: rgba(255, 244, 241, 0.92);
+  }
+
+  @media (max-width: 900px) {
+    .hero,
+    .content-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

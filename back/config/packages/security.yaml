@@ -17,10 +17,15 @@ security:
             pattern: ^/(_profiler|_wdt|assets|build)/
             security: false
         main:
-            lazy: true
+            stateless: true
             provider: app_user_provider
+            access_token:
+                token_handler: App\Security\ApiAccessTokenHandler
+                failure_handler: App\Security\ApiAuthenticationFailureHandler
 
-    access_control: []
+    access_control:
+        - { path: ^/api/me$, roles: ROLE_USER }
+        - { path: ^/api/auth/logout$, roles: ROLE_USER }
 
 when@test:
     security:
