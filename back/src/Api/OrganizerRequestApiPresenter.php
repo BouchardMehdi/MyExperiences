@@ -8,6 +8,11 @@ use App\Enum\OrganizerEventType;
 
 class OrganizerRequestApiPresenter
 {
+    public function __construct(
+        private readonly OrganizerRequestScreeningPresenter $organizerRequestScreeningPresenter,
+    ) {
+    }
+
     /**
      * @param list<OrganizerRequest> $requests
      * @return list<array<string, mixed>>
@@ -46,6 +51,7 @@ class OrganizerRequestApiPresenter
             'socialLinks' => $request->getSocialLinks(),
             'siret' => $request->getSiret(),
             'motivation' => $request->getMotivation(),
+            'screening' => $this->organizerRequestScreeningPresenter->present($request),
             'createdAt' => $request->getCreatedAt()->format(\DateTimeInterface::ATOM),
             'processedAt' => $request->getProcessedAt()?->format(\DateTimeInterface::ATOM),
             'user' => [

@@ -7,6 +7,7 @@ use App\Dto\OrganizerRequest\CreateOrganizerRequestInput;
 use App\Entity\OrganizerRequest;
 use App\Entity\User;
 use App\Repository\OrganizerRequestRepository;
+use App\Service\OrganizerRequestScreeningService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -25,6 +26,7 @@ class OrganizerRequestController extends AbstractController
         ValidatorInterface $validator,
         OrganizerRequestRepository $organizerRequestRepository,
         OrganizerRequestApiPresenter $organizerRequestApiPresenter,
+        OrganizerRequestScreeningService $organizerRequestScreeningService,
         EntityManagerInterface $entityManager,
     ): JsonResponse {
         $user = $this->getAuthenticatedUser();
@@ -96,6 +98,8 @@ class OrganizerRequestController extends AbstractController
             ->setSocialLinks('' === $input->socialLinks ? null : $input->socialLinks)
             ->setSiret($input->siret)
             ->setMotivation($input->motivation);
+
+        $organizerRequestScreeningService->screen($organizerRequest);
 
         $entityManager->persist($organizerRequest);
         $entityManager->flush();

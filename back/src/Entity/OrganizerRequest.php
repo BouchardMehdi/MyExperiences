@@ -3,6 +3,7 @@
 namespace App\Entity;
 
 use App\Enum\OrganizerRequestStatus;
+use App\Enum\OrganizerRequestScreeningStatus;
 use App\Repository\OrganizerRequestRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
@@ -93,6 +94,15 @@ class OrganizerRequest
 
     #[ORM\Column(length: 20, enumType: OrganizerRequestStatus::class)]
     private OrganizerRequestStatus $status = OrganizerRequestStatus::PENDING;
+
+    #[ORM\Column(length: 20, enumType: OrganizerRequestScreeningStatus::class)]
+    private OrganizerRequestScreeningStatus $screeningStatus = OrganizerRequestScreeningStatus::NEEDS_REVIEW;
+
+    /**
+     * @var array<string, array<string, mixed>>
+     */
+    #[ORM\Column(type: Types::JSON)]
+    private array $screeningChecks = [];
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
     private \DateTimeImmutable $createdAt;
@@ -334,6 +344,46 @@ class OrganizerRequest
         return $this->createdAt;
     }
 
+    public function getScreeningStatus(): OrganizerRequestScreeningStatus
+    {
+        return $this->screeningStatus;
+    }
+
+    public function setScreeningStatus(OrganizerRequestScreeningStatus $screeningStatus): static
+    {
+        $this->screeningStatus = $screeningStatus;
+
+        return $this;
+    }
+
+    /**
+     * @return array<string, array<string, mixed>>
+     */
+    public function getScreeningChecks(): array
+    {
+        return $this->screeningChecks;
+    }
+
+    /**
+     * @param array<string, array<string, mixed>> $screeningChecks
+     */
+    public function setScreeningChecks(array $screeningChecks): static
+    {
+        $normalizedChecks = [];
+
+        foreach ($screeningChecks as $code => $check) {
+            if (!is_string($code) || !is_array($check)) {
+                continue;
+            }
+
+            $normalizedChecks[$code] = $check;
+        }
+
+        $this->screeningChecks = $normalizedChecks;
+
+        return $this;
+    }
+
     public function getProcessedAt(): ?\DateTimeImmutable
     {
         return $this->processedAt;
@@ -352,6 +402,15 @@ class OrganizerRequest
     {
         $this->status = OrganizerRequestStatus::REJECTED;
         $this->reviewedBy = $admin;
+        $this->processedAt = new \DateTimeImmutable();
+
+        return $this;
+    }
+
+    public function rejectAutomatically(): static
+    {
+        $this->status = OrganizerRequestStatus::REJECTED;
+        $this->reviewedBy = null;
         $this->processedAt = new \DateTimeImmutable();
 
         return $this;

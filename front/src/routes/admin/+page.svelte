@@ -355,7 +355,12 @@
                   <strong>{organizerRequest.user?.fullName || 'Utilisateur'}</strong>
                   <small>{organizerRequest.user?.email} - {formatDateTime(organizerRequest.createdAt)}</small>
                 </div>
-                <span class="status-chip">{organizerRequest.status}</span>
+                <div class="chip-stack">
+                  <span class="status-chip">{organizerRequest.status}</span>
+                  {#if organizerRequest.screening?.label}
+                    <span class="status-chip screening">{organizerRequest.screening.label}</span>
+                  {/if}
+                </div>
               </header>
 
               <div class="request-overview">
@@ -398,6 +403,31 @@
               {/if}
 
               <div class="request-copy">
+                {#if organizerRequest.screening?.summary?.length}
+                  <div>
+                    <span>Pre-tri automatique</span>
+                    <ul class="summary-list">
+                      {#each organizerRequest.screening.summary as item}
+                        <li>{item}</li>
+                      {/each}
+                    </ul>
+                  </div>
+                {/if}
+
+                {#if organizerRequest.screening?.checks?.length}
+                  <div>
+                    <span>Controles</span>
+                    <div class="check-list">
+                      {#each organizerRequest.screening.checks as check}
+                        <div class={`check-item ${check.status || 'warning'}`}>
+                          <strong>{check.label}</strong>
+                          <p>{check.message}</p>
+                        </div>
+                      {/each}
+                    </div>
+                  </div>
+                {/if}
+
                 <div>
                   <span>Description d activite</span>
                   <p>{organizerRequest.activityDescription}</p>
@@ -702,6 +732,13 @@
     align-items: start;
   }
 
+  .chip-stack {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: end;
+    gap: 0.45rem;
+  }
+
   .request-overview {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -760,6 +797,54 @@
     background: rgba(243, 231, 220, 0.9);
     color: #6e513e;
     font-weight: 700;
+  }
+
+  .status-chip.screening {
+    background: rgba(233, 238, 246, 0.9);
+    color: #44576f;
+  }
+
+  .check-list,
+  .summary-list {
+    display: grid;
+    gap: 0.65rem;
+    margin-top: 0.65rem;
+  }
+
+  .summary-list {
+    margin-bottom: 0;
+    padding-left: 1.1rem;
+  }
+
+  .check-item {
+    padding: 0.8rem 0.9rem;
+    border-radius: 1rem;
+    background: rgba(255, 255, 255, 0.72);
+    border: 1px solid rgba(143, 108, 82, 0.12);
+  }
+
+  .check-item strong {
+    display: block;
+    margin-bottom: 0.3rem;
+  }
+
+  .check-item p {
+    margin: 0;
+  }
+
+  .check-item.passed {
+    background: rgba(236, 247, 240, 0.88);
+    border-color: rgba(31, 126, 92, 0.16);
+  }
+
+  .check-item.warning {
+    background: rgba(255, 249, 237, 0.92);
+    border-color: rgba(171, 121, 38, 0.16);
+  }
+
+  .check-item.failed {
+    background: rgba(255, 244, 241, 0.92);
+    border-color: rgba(156, 47, 32, 0.16);
   }
 
   .grid-form {
