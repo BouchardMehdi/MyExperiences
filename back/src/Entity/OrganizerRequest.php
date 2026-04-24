@@ -27,6 +27,65 @@ class OrganizerRequest
     #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
     private ?User $reviewedBy = null;
 
+    #[ORM\Column(length: 150)]
+    #[Assert\NotBlank(message: 'Le nom de structure ou de profil public est requis.')]
+    #[Assert\Length(min: 2, max: 150)]
+    private ?string $organizationName = null;
+
+    #[ORM\Column(length: 30)]
+    #[Assert\NotBlank(message: 'Le numero de telephone est requis.')]
+    #[Assert\Regex(
+        pattern: '/^\+?[0-9\s().-]{8,20}$/',
+        message: 'Veuillez saisir un numero de telephone valide.'
+    )]
+    private ?string $phoneNumber = null;
+
+    #[ORM\Column(length: 255)]
+    #[Assert\NotBlank(message: "L'adresse est requise.")]
+    #[Assert\Length(min: 5, max: 255)]
+    private ?string $streetAddress = null;
+
+    #[ORM\Column(length: 20)]
+    #[Assert\NotBlank(message: 'Le code postal est requis.')]
+    #[Assert\Length(min: 3, max: 20)]
+    private ?string $postalCode = null;
+
+    #[ORM\Column(length: 120)]
+    #[Assert\NotBlank(message: 'La ville est requise.')]
+    #[Assert\Length(min: 2, max: 120)]
+    private ?string $city = null;
+
+    #[ORM\Column(length: 120)]
+    #[Assert\NotBlank(message: 'Le pays est requis.')]
+    #[Assert\Length(min: 2, max: 120)]
+    private ?string $country = 'France';
+
+    #[ORM\Column(length: 30)]
+    #[Assert\NotBlank(message: 'Le type de structure est requis.')]
+    private ?string $businessType = null;
+
+    /**
+     * @var list<string>
+     */
+    #[ORM\Column(type: Types::JSON)]
+    private array $eventTypes = [];
+
+    #[ORM\Column(type: Types::TEXT)]
+    #[Assert\NotBlank(message: "La description de l'activite est requise.")]
+    #[Assert\Length(min: 60, minMessage: "La description de l'activite doit contenir au moins {{ limit }} caracteres.")]
+    private ?string $activityDescription = null;
+
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $websiteUrl = null;
+
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    private ?string $socialLinks = null;
+
+    #[ORM\Column(length: 14)]
+    #[Assert\NotBlank(message: 'Le SIRET est requis.')]
+    #[Assert\Regex(pattern: '/^\d{14}$/', message: 'Le SIRET doit contenir exactement 14 chiffres.')]
+    private ?string $siret = null;
+
     #[ORM\Column(type: Types::TEXT)]
     #[Assert\NotBlank(message: 'La motivation est requise.')]
     #[Assert\Length(min: 20, minMessage: 'La motivation doit contenir au moins {{ limit }} caracteres.')]
@@ -71,6 +130,177 @@ class OrganizerRequest
     public function setReviewedBy(?User $reviewedBy): static
     {
         $this->reviewedBy = $reviewedBy;
+
+        return $this;
+    }
+
+    public function getOrganizationName(): ?string
+    {
+        return $this->organizationName;
+    }
+
+    public function setOrganizationName(string $organizationName): static
+    {
+        $this->organizationName = trim($organizationName);
+
+        return $this;
+    }
+
+    public function getPhoneNumber(): ?string
+    {
+        return $this->phoneNumber;
+    }
+
+    public function setPhoneNumber(string $phoneNumber): static
+    {
+        $this->phoneNumber = trim($phoneNumber);
+
+        return $this;
+    }
+
+    public function getStreetAddress(): ?string
+    {
+        return $this->streetAddress;
+    }
+
+    public function setStreetAddress(string $streetAddress): static
+    {
+        $this->streetAddress = trim($streetAddress);
+
+        return $this;
+    }
+
+    public function getPostalCode(): ?string
+    {
+        return $this->postalCode;
+    }
+
+    public function setPostalCode(string $postalCode): static
+    {
+        $this->postalCode = trim($postalCode);
+
+        return $this;
+    }
+
+    public function getCity(): ?string
+    {
+        return $this->city;
+    }
+
+    public function setCity(string $city): static
+    {
+        $this->city = trim($city);
+
+        return $this;
+    }
+
+    public function getCountry(): ?string
+    {
+        return $this->country;
+    }
+
+    public function setCountry(string $country): static
+    {
+        $this->country = trim($country);
+
+        return $this;
+    }
+
+    public function getBusinessType(): ?string
+    {
+        return $this->businessType;
+    }
+
+    public function setBusinessType(string $businessType): static
+    {
+        $this->businessType = strtoupper(trim($businessType));
+
+        return $this;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function getEventTypes(): array
+    {
+        return $this->eventTypes;
+    }
+
+    /**
+     * @param list<string> $eventTypes
+     */
+    public function setEventTypes(array $eventTypes): static
+    {
+        $normalized = [];
+
+        foreach ($eventTypes as $eventType) {
+            if (!is_string($eventType)) {
+                continue;
+            }
+
+            $value = strtoupper(trim($eventType));
+            if ('' !== $value) {
+                $normalized[] = $value;
+            }
+        }
+
+        $this->eventTypes = array_values(array_unique($normalized));
+
+        return $this;
+    }
+
+    public function getActivityDescription(): ?string
+    {
+        return $this->activityDescription;
+    }
+
+    public function setActivityDescription(string $activityDescription): static
+    {
+        $this->activityDescription = trim($activityDescription);
+
+        return $this;
+    }
+
+    public function getWebsiteUrl(): ?string
+    {
+        return $this->websiteUrl;
+    }
+
+    public function setWebsiteUrl(?string $websiteUrl): static
+    {
+        $this->websiteUrl = null === $websiteUrl ? null : trim($websiteUrl);
+
+        if ('' === $this->websiteUrl) {
+            $this->websiteUrl = null;
+        }
+
+        return $this;
+    }
+
+    public function getSocialLinks(): ?string
+    {
+        return $this->socialLinks;
+    }
+
+    public function setSocialLinks(?string $socialLinks): static
+    {
+        $this->socialLinks = null === $socialLinks ? null : trim($socialLinks);
+
+        if ('' === $this->socialLinks) {
+            $this->socialLinks = null;
+        }
+
+        return $this;
+    }
+
+    public function getSiret(): ?string
+    {
+        return $this->siret;
+    }
+
+    public function setSiret(string $siret): static
+    {
+        $this->siret = trim($siret);
 
         return $this;
     }

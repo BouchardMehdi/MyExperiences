@@ -358,7 +358,63 @@
                 <span class="status-chip">{organizerRequest.status}</span>
               </header>
 
-              <p>{organizerRequest.motivation}</p>
+              <div class="request-overview">
+                <div>
+                  <span>Structure</span>
+                  <strong>{organizerRequest.organizationName}</strong>
+                </div>
+                <div>
+                  <span>Telephone</span>
+                  <strong>{organizerRequest.phoneNumber}</strong>
+                </div>
+                <div>
+                  <span>Ville</span>
+                  <strong>{organizerRequest.city}, {organizerRequest.postalCode}</strong>
+                </div>
+                <div>
+                  <span>Type</span>
+                  <strong>{organizerRequest.businessTypeLabel || organizerRequest.businessType}</strong>
+                </div>
+                <div>
+                  <span>SIRET</span>
+                  <strong>{organizerRequest.siret}</strong>
+                </div>
+                <div>
+                  <span>Site web</span>
+                  <strong>{organizerRequest.websiteUrl || 'Non renseigne'}</strong>
+                </div>
+              </div>
+
+              <p class="address-line">
+                {organizerRequest.streetAddress}, {organizerRequest.postalCode} {organizerRequest.city}, {organizerRequest.country}
+              </p>
+
+              {#if organizerRequest.eventTypeLabels?.length}
+                <div class="tag-row">
+                  {#each organizerRequest.eventTypeLabels as eventTypeLabel}
+                    <span class="tag">{eventTypeLabel}</span>
+                  {/each}
+                </div>
+              {/if}
+
+              <div class="request-copy">
+                <div>
+                  <span>Description d activite</span>
+                  <p>{organizerRequest.activityDescription}</p>
+                </div>
+
+                <div>
+                  <span>Motivation</span>
+                  <p>{organizerRequest.motivation}</p>
+                </div>
+
+                {#if organizerRequest.socialLinks}
+                  <div>
+                    <span>Liens utiles</span>
+                    <p>{organizerRequest.socialLinks}</p>
+                  </div>
+                {/if}
+              </div>
 
               <div class="action-row">
                 <button
@@ -427,7 +483,7 @@
                 </label>
 
                 <div class="meta-line">
-                  {user.experienceCount} experiences · {user.bookingCount} reservations · {user.reviewCount} avis
+                  {user.experienceCount} experiences - {user.bookingCount} reservations - {user.reviewCount} avis
                 </div>
 
                 <button class="primary" disabled={processingKey === `user-${user.id}`} type="submit">
@@ -491,7 +547,7 @@
                 </label>
 
                 <div class="meta-line">
-                  {experience.slotCount} creneaux · {experience.reviewSummary?.count || 0} avis
+                  {experience.slotCount} creneaux - {experience.reviewSummary?.count || 0} avis
                 </div>
 
                 <div class="action-row">
@@ -646,6 +702,58 @@
     align-items: start;
   }
 
+  .request-overview {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin-top: 1rem;
+  }
+
+  .request-overview div,
+  .request-copy div {
+    padding: 0.9rem;
+    border-radius: 1rem;
+    background: rgba(247, 239, 229, 0.78);
+  }
+
+  .request-overview span,
+  .request-copy span {
+    display: block;
+    margin-bottom: 0.35rem;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #7d746c;
+  }
+
+  .address-line {
+    margin-top: 0.9rem;
+  }
+
+  .tag-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+    margin-top: 0.9rem;
+  }
+
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2rem;
+    padding: 0.38rem 0.75rem;
+    border-radius: 999px;
+    background: rgba(230, 205, 180, 0.32);
+    color: #7b604d;
+    font-weight: 700;
+  }
+
+  .request-copy {
+    display: grid;
+    gap: 0.75rem;
+    margin-top: 0.9rem;
+  }
+
   .status-chip {
     padding: 0.4rem 0.8rem;
     border-radius: 999px;
@@ -775,6 +883,10 @@
   @media (max-width: 900px) {
     .stats-grid,
     .grid-form {
+      grid-template-columns: 1fr;
+    }
+
+    .request-overview {
       grid-template-columns: 1fr;
     }
   }

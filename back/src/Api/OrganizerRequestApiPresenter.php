@@ -3,6 +3,8 @@
 namespace App\Api;
 
 use App\Entity\OrganizerRequest;
+use App\Enum\OrganizerBusinessType;
+use App\Enum\OrganizerEventType;
 
 class OrganizerRequestApiPresenter
 {
@@ -20,9 +22,29 @@ class OrganizerRequestApiPresenter
      */
     public function present(OrganizerRequest $request): array
     {
+        $businessType = $request->getBusinessType();
+        $businessTypeLabel = null === $businessType ? null : OrganizerBusinessType::tryFrom($businessType)?->label();
+
         return [
             'id' => $request->getId(),
             'status' => $request->getStatus()->value,
+            'organizationName' => $request->getOrganizationName(),
+            'phoneNumber' => $request->getPhoneNumber(),
+            'streetAddress' => $request->getStreetAddress(),
+            'postalCode' => $request->getPostalCode(),
+            'city' => $request->getCity(),
+            'country' => $request->getCountry(),
+            'businessType' => $businessType,
+            'businessTypeLabel' => $businessTypeLabel,
+            'eventTypes' => $request->getEventTypes(),
+            'eventTypeLabels' => array_map(
+                static fn (string $eventType): string => OrganizerEventType::tryFrom($eventType)?->label() ?? $eventType,
+                $request->getEventTypes()
+            ),
+            'activityDescription' => $request->getActivityDescription(),
+            'websiteUrl' => $request->getWebsiteUrl(),
+            'socialLinks' => $request->getSocialLinks(),
+            'siret' => $request->getSiret(),
             'motivation' => $request->getMotivation(),
             'createdAt' => $request->getCreatedAt()->format(\DateTimeInterface::ATOM),
             'processedAt' => $request->getProcessedAt()?->format(\DateTimeInterface::ATOM),

@@ -56,6 +56,18 @@ class OrganizerRequestController extends AbstractController
         }
 
         $input = new CreateOrganizerRequestInput();
+        $input->organizationName = $this->normalizeString($payload['organizationName'] ?? null);
+        $input->phoneNumber = $this->normalizeString($payload['phoneNumber'] ?? null);
+        $input->streetAddress = $this->normalizeString($payload['streetAddress'] ?? null);
+        $input->postalCode = $this->normalizeString($payload['postalCode'] ?? null);
+        $input->city = $this->normalizeString($payload['city'] ?? null);
+        $input->country = $this->normalizeString($payload['country'] ?? 'France');
+        $input->businessType = $this->normalizeString($payload['businessType'] ?? null);
+        $input->eventTypes = $this->normalizeStringArray($payload['eventTypes'] ?? []);
+        $input->activityDescription = $this->normalizeString($payload['activityDescription'] ?? null);
+        $input->websiteUrl = $this->normalizeString($payload['websiteUrl'] ?? null);
+        $input->socialLinks = $this->normalizeString($payload['socialLinks'] ?? null);
+        $input->siret = $this->normalizeString($payload['siret'] ?? null);
         $input->motivation = $this->normalizeString($payload['motivation'] ?? null);
 
         $fieldErrors = $this->collectValidationErrors($validator->validate($input));
@@ -71,6 +83,18 @@ class OrganizerRequestController extends AbstractController
 
         $organizerRequest = (new OrganizerRequest())
             ->setUser($user)
+            ->setOrganizationName($input->organizationName)
+            ->setPhoneNumber($input->phoneNumber)
+            ->setStreetAddress($input->streetAddress)
+            ->setPostalCode($input->postalCode)
+            ->setCity($input->city)
+            ->setCountry($input->country)
+            ->setBusinessType($input->businessType)
+            ->setEventTypes($input->eventTypes)
+            ->setActivityDescription($input->activityDescription)
+            ->setWebsiteUrl('' === $input->websiteUrl ? null : $input->websiteUrl)
+            ->setSocialLinks('' === $input->socialLinks ? null : $input->socialLinks)
+            ->setSiret($input->siret)
             ->setMotivation($input->motivation);
 
         $entityManager->persist($organizerRequest);
@@ -131,6 +155,31 @@ class OrganizerRequestController extends AbstractController
     private function normalizeString(mixed $value): string
     {
         return is_scalar($value) ? trim((string) $value) : '';
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function normalizeStringArray(mixed $value): array
+    {
+        if (!is_array($value)) {
+            return [];
+        }
+
+        $normalized = [];
+
+        foreach ($value as $item) {
+            if (!is_scalar($item)) {
+                continue;
+            }
+
+            $candidate = strtoupper(trim((string) $item));
+            if ('' !== $candidate) {
+                $normalized[] = $candidate;
+            }
+        }
+
+        return array_values(array_unique($normalized));
     }
 
     /**

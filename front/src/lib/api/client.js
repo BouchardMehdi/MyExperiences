@@ -399,7 +399,21 @@ export async function deleteAdminReview(token, reviewId) {
 
 /**
  * @param {string} token
- * @param {{ motivation: string }} payload
+ * @param {{
+ *   organizationName: string;
+ *   phoneNumber: string;
+ *   streetAddress: string;
+ *   postalCode: string;
+ *   city: string;
+ *   country: string;
+ *   businessType: string;
+ *   eventTypes: string[];
+ *   activityDescription: string;
+ *   websiteUrl: string;
+ *   socialLinks: string;
+ *   siret: string;
+ *   motivation: string;
+ * }} payload
  * @returns {Promise<ApiPayload>}
  */
 export async function requestOrganizerAccess(token, payload) {
