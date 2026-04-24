@@ -9,6 +9,7 @@ class OrganizerRequestScreeningService
 {
     public function __construct(
         private readonly OrganizerAddressLookupService $addressLookupService,
+        private readonly OrganizerSiretLookupService $organizerSiretLookupService,
     ) {
     }
 
@@ -112,10 +113,12 @@ class OrganizerRequestScreeningService
             ];
         }
 
-        return [
-            'status' => 'passed',
-            'message' => 'SIRET coherent numeriquement.',
-        ];
+        return $this->organizerSiretLookupService->verify(
+            $siret,
+            (string) $organizerRequest->getOrganizationName(),
+            (string) $organizerRequest->getPostalCode(),
+            (string) $organizerRequest->getCity()
+        );
     }
 
     /**

@@ -7,6 +7,85 @@ class OrganizerAddressLookupService
     private const SEARCH_ENDPOINT = 'https://data.geopf.fr/geocodage/search';
 
     /**
+     * @return array{available: bool, message: string|null, suggestions: list<array<string, mixed>>}
+     */
+    public function suggest(string $query, int $limit = 5): array
+    {
+        $normalizedQuery = trim($query);
+        if (mb_strlen($normalizedQuery) < 3) {
+            return [
+                'available' => true,
+                'message' => null,
+                'suggestions' => [],
+            ];
+        }
+
+        $limit = max(1, min($limit, 8));
+        $url = sprintf(
+            '%s?limit=%d&q=%s&type=street,housenumber',
+            self::SEARCH_ENDPOINT,
+            $limit,
+            rawurlencode($normalizedQuery)
+        );
+
+        $response = $this->fetchJson($url);
+        if (!$response['ok']) {
+            return [
+                'available' => false,
+                'message' => "Le service public d'autocompletion d'adresse est momentanement indisponible.",
+                'suggestions' => [],
+            ];
+        }
+
+        $features = $response['payload']['features'] ?? null;
+        if (!is_array($features)) {
+            return [
+                'available' => false,
+                'message' => "La reponse du service d'adresse est inexploitable pour le moment.",
+                'suggestions' => [],
+            ];
+        }
+
+        $suggestions = [];
+
+        foreach ($features as $feature) {
+            if (!is_array($feature)) {
+                continue;
+            }
+
+            $properties = is_array($feature['properties'] ?? null) ? $feature['properties'] : [];
+            $geometry = is_array($feature['geometry'] ?? null) ? $feature['geometry'] : [];
+            $coordinates = is_array($geometry['coordinates'] ?? null) ? $geometry['coordinates'] : [];
+
+            $label = trim((string) ($properties['label'] ?? ''));
+            $streetAddress = trim((string) ($properties['name'] ?? ''));
+            $postalCode = trim((string) ($properties['postcode'] ?? ''));
+            $city = trim((string) ($properties['city'] ?? ''));
+
+            if ('' === $label || '' === $streetAddress || '' === $postalCode || '' === $city) {
+                continue;
+            }
+
+            $suggestions[] = [
+                'label' => $label,
+                'streetAddress' => $streetAddress,
+                'postalCode' => $postalCode,
+                'city' => $city,
+                'country' => 'France',
+                'score' => is_numeric($properties['score'] ?? null) ? (float) $properties['score'] : null,
+                'latitude' => isset($coordinates[1]) && is_numeric($coordinates[1]) ? (float) $coordinates[1] : null,
+                'longitude' => isset($coordinates[0]) && is_numeric($coordinates[0]) ? (float) $coordinates[0] : null,
+            ];
+        }
+
+        return [
+            'available' => true,
+            'message' => null,
+            'suggestions' => $suggestions,
+        ];
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public function verify(string $streetAddress, string $postalCode, string $city, string $country): array
@@ -19,39 +98,16 @@ class OrganizerAddressLookupService
             ];
         }
 
-        $url = sprintf('%s?limit=1&q=%s', self::SEARCH_ENDPOINT, rawurlencode($query));
-        $context = stream_context_create([
-            'http' => [
-                'method' => 'GET',
-                'timeout' => 4,
-                'ignore_errors' => true,
-                'header' => implode("\r\n", [
-                    'Accept: application/json',
-                    'User-Agent: MyExperiences/1.0',
-                ]),
-            ],
-        ]);
+        $response = $this->fetchJson(sprintf('%s?limit=1&q=%s', self::SEARCH_ENDPOINT, rawurlencode($query)));
 
-        $responseBody = @file_get_contents($url, false, $context);
-        $statusCode = $this->extractStatusCode($http_response_header ?? []);
-
-        if (false === $responseBody || 200 !== $statusCode) {
+        if (!$response['ok']) {
             return [
                 'status' => 'warning',
                 'message' => "La verification d'adresse est temporairement indisponible. La demande reste a revoir manuellement.",
             ];
         }
 
-        try {
-            /** @var array<string, mixed> $payload */
-            $payload = json_decode($responseBody, true, 512, \JSON_THROW_ON_ERROR);
-        } catch (\JsonException) {
-            return [
-                'status' => 'warning',
-                'message' => "La reponse du service d'adresse est inexploitable pour le moment.",
-            ];
-        }
-
+        $payload = $response['payload'];
         $features = $payload['features'] ?? null;
         if (!is_array($features) || [] === $features) {
             return [
@@ -109,6 +165,49 @@ class OrganizerAddressLookupService
             'score' => $score,
             'latitude' => isset($coordinates[1]) && is_numeric($coordinates[1]) ? (float) $coordinates[1] : null,
             'longitude' => isset($coordinates[0]) && is_numeric($coordinates[0]) ? (float) $coordinates[0] : null,
+        ];
+    }
+
+    /**
+     * @return array{ok: bool, payload: array<string, mixed>}
+     */
+    private function fetchJson(string $url): array
+    {
+        $context = stream_context_create([
+            'http' => [
+                'method' => 'GET',
+                'timeout' => 4,
+                'ignore_errors' => true,
+                'header' => implode("\r\n", [
+                    'Accept: application/json',
+                    'User-Agent: MyExperiences/1.0',
+                ]),
+            ],
+        ]);
+
+        $responseBody = @file_get_contents($url, false, $context);
+        $statusCode = $this->extractStatusCode($http_response_header ?? []);
+
+        if (false === $responseBody || 200 !== $statusCode) {
+            return [
+                'ok' => false,
+                'payload' => [],
+            ];
+        }
+
+        try {
+            /** @var array<string, mixed> $payload */
+            $payload = json_decode($responseBody, true, 512, \JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            return [
+                'ok' => false,
+                'payload' => [],
+            ];
+        }
+
+        return [
+            'ok' => true,
+            'payload' => $payload,
         ];
     }
 

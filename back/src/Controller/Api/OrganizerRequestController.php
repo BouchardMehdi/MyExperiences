@@ -7,6 +7,7 @@ use App\Dto\OrganizerRequest\CreateOrganizerRequestInput;
 use App\Entity\OrganizerRequest;
 use App\Entity\User;
 use App\Repository\OrganizerRequestRepository;
+use App\Service\OrganizerAddressLookupService;
 use App\Service\OrganizerRequestScreeningService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -20,6 +21,38 @@ use Symfony\Component\Validator\Validator\ValidatorInterface;
 #[Route('/api/organizer-requests', name: 'api_organizer_requests_')]
 class OrganizerRequestController extends AbstractController
 {
+    #[Route('/address-suggestions', name: 'address_suggestions', methods: ['GET'])]
+    public function addressSuggestions(
+        Request $request,
+        OrganizerAddressLookupService $organizerAddressLookupService,
+    ): JsonResponse {
+        $user = $this->getAuthenticatedUser();
+        if ($user instanceof JsonResponse) {
+            return $user;
+        }
+
+        $query = $this->normalizeString($request->query->get('q'));
+        if (mb_strlen($query) < 3) {
+            return $this->json([
+                'data' => [],
+                'meta' => [
+                    'available' => true,
+                    'message' => null,
+                ],
+            ]);
+        }
+
+        $result = $organizerAddressLookupService->suggest($query);
+
+        return $this->json([
+            'data' => $result['suggestions'],
+            'meta' => [
+                'available' => $result['available'],
+                'message' => $result['message'],
+            ],
+        ]);
+    }
+
     #[Route('', name: 'create', methods: ['POST'])]
     public function create(
         Request $request,

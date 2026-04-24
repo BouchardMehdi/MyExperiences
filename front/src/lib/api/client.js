@@ -429,6 +429,20 @@ export async function requestOrganizerAccess(token, payload) {
 
 /**
  * @param {string} token
+ * @param {string} query
+ * @returns {Promise<ApiPayload>}
+ */
+export async function fetchOrganizerAddressSuggestions(token, query) {
+  const params = new URLSearchParams();
+  params.set('q', query);
+
+  return apiFetch(`/organizer-requests/address-suggestions?${params.toString()}`, {
+    headers: createAuthHeaders(token)
+  });
+}
+
+/**
+ * @param {string} token
  * @param {number | string} requestId
  * @returns {Promise<ApiPayload>}
  */

@@ -1,9 +1,13 @@
 <script>
   import { goto } from '$app/navigation';
   import { base } from '$app/paths';
-  import { onMount } from 'svelte';
+  import { onDestroy, onMount } from 'svelte';
   import { authSession, clearAuthSession, getStoredAuthToken, updateAuthUser } from '$lib/auth/session';
-  import { fetchCurrentUser, requestOrganizerAccess } from '$lib/api/client';
+  import {
+    fetchCurrentUser,
+    fetchOrganizerAddressSuggestions,
+    requestOrganizerAccess
+  } from '$lib/api/client';
   import { formatDateTime } from '$lib/utils/experience';
 
   const businessTypeOptions = [
@@ -33,6 +37,13 @@
   let organizerRequestMessage = '';
   let organizerRequestError = '';
   let isSubmittingOrganizerRequest = false;
+  let isLoadingAddressSuggestions = false;
+  let addressSuggestionError = '';
+  let lastAddressSuggestionQuery = '';
+  /** @type {any[]} */
+  let addressSuggestions = [];
+  /** @type {ReturnType<typeof setTimeout> | null} */
+  let addressSuggestionTimeout = null;
 
   /** @type {{
    *   organizationName: string;
@@ -74,6 +85,12 @@
       return;
     } finally {
       isLoading = false;
+    }
+  });
+
+  onDestroy(() => {
+    if (addressSuggestionTimeout) {
+      clearTimeout(addressSuggestionTimeout);
     }
   });
 
@@ -136,6 +153,20 @@
       : [];
   }
 
+  $: streetAddressQuery = organizerForm.streetAddress.trim();
+  $: if (streetAddressQuery.length < 3) {
+    addressSuggestions = [];
+    addressSuggestionError = '';
+    isLoadingAddressSuggestions = false;
+    lastAddressSuggestionQuery = '';
+    if (addressSuggestionTimeout) {
+      clearTimeout(addressSuggestionTimeout);
+      addressSuggestionTimeout = null;
+    }
+  } else if (streetAddressQuery !== lastAddressSuggestionQuery) {
+    scheduleAddressSuggestions(streetAddressQuery);
+  }
+
   /**
    * @param {string} eventType
    */
@@ -152,6 +183,68 @@
       ...organizerForm,
       eventTypes: [...organizerForm.eventTypes, eventType]
     };
+  }
+
+  /**
+   * @param {string} query
+   */
+  function scheduleAddressSuggestions(query) {
+    if (addressSuggestionTimeout) {
+      clearTimeout(addressSuggestionTimeout);
+    }
+
+    addressSuggestionTimeout = setTimeout(() => {
+      void loadAddressSuggestions(query);
+    }, 220);
+  }
+
+  /**
+   * @param {string} query
+   */
+  async function loadAddressSuggestions(query) {
+    const token = getStoredAuthToken();
+
+    if (!token || query !== organizerForm.streetAddress.trim()) {
+      return;
+    }
+
+    isLoadingAddressSuggestions = true;
+    addressSuggestionError = '';
+    lastAddressSuggestionQuery = query;
+
+    try {
+      const response = await fetchOrganizerAddressSuggestions(token, query);
+      addressSuggestions = Array.isArray(response.data) ? response.data : [];
+
+      const meta =
+        response.meta && typeof response.meta === 'object'
+          ? /** @type {Record<string, any>} */ (response.meta)
+          : null;
+      if (meta && meta.available === false && typeof meta.message === 'string') {
+        addressSuggestionError = meta.message;
+      }
+    } catch (exception) {
+      addressSuggestions = [];
+      addressSuggestionError = exception instanceof Error ? exception.message : 'Erreur inconnue.';
+    } finally {
+      isLoadingAddressSuggestions = false;
+    }
+  }
+
+  /**
+   * @param {Record<string, any>} suggestion
+   */
+  function applyAddressSuggestion(suggestion) {
+    organizerForm = {
+      ...organizerForm,
+      streetAddress: suggestion.streetAddress || organizerForm.streetAddress,
+      postalCode: suggestion.postalCode || organizerForm.postalCode,
+      city: suggestion.city || organizerForm.city,
+      country: suggestion.country || organizerForm.country
+    };
+    lastAddressSuggestionQuery = organizerForm.streetAddress.trim();
+    addressSuggestions = [];
+    addressSuggestionError = '';
   }
 
   async function handleOrganizerRequest() {
@@ -310,6 +403,7 @@
           <label>
             <span>SIRET</span>
             <input bind:value={organizerForm.siret} inputmode="numeric" maxlength="14" type="text" />
+            <small>Verification automatique dans la base officielle des entreprises diffusibles.</small>
           </label>
 
           <label>
@@ -324,6 +418,26 @@
           <label class="full-width">
             <span>Adresse</span>
             <input bind:value={organizerForm.streetAddress} type="text" />
+            <small>Suggestion automatique via le referentiel public d adresses francais.</small>
+
+            {#if isLoadingAddressSuggestions}
+              <div class="suggestion-box muted">Recherche d adresses...</div>
+            {:else if addressSuggestions.length > 0}
+              <div class="suggestion-box">
+                {#each addressSuggestions as suggestion}
+                  <button
+                    class="suggestion-item"
+                    on:click={() => applyAddressSuggestion(suggestion)}
+                    type="button"
+                  >
+                    <strong>{suggestion.label}</strong>
+                    <span>{suggestion.postalCode} {suggestion.city}</span>
+                  </button>
+                {/each}
+              </div>
+            {:else if addressSuggestionError}
+              <div class="suggestion-box muted error-text">{addressSuggestionError}</div>
+            {/if}
           </label>
 
           <label>
@@ -515,6 +629,11 @@
     resize: vertical;
   }
 
+  small {
+    color: #7a6555;
+    line-height: 1.45;
+  }
+
   .full-width {
     grid-column: 1 / -1;
   }
@@ -582,6 +701,48 @@
 
   .submit-button {
     margin-top: 0.2rem;
+  }
+
+  .suggestion-box {
+    display: grid;
+    gap: 0.45rem;
+    padding: 0.7rem;
+    border-radius: 1rem;
+    background: rgba(255, 255, 255, 0.84);
+    border: 1px solid rgba(143, 108, 82, 0.12);
+  }
+
+  .suggestion-box.muted {
+    color: #74675d;
+  }
+
+  .suggestion-item {
+    display: grid;
+    gap: 0.15rem;
+    padding: 0.8rem 0.9rem;
+    border: 0;
+    border-radius: 0.9rem;
+    text-align: left;
+    background: rgba(247, 239, 229, 0.78);
+    color: #2f231c;
+    cursor: pointer;
+    font: inherit;
+  }
+
+  .suggestion-item strong {
+    color: #24160e;
+  }
+
+  .suggestion-item span {
+    color: #6d5a4e;
+    font-size: 0.92rem;
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 500;
+  }
+
+  .error-text {
+    color: #9c2f20;
   }
 
   .inline-error,
