@@ -63,7 +63,9 @@
 <style>
   .card {
     display: grid;
+    grid-template-rows: auto 1fr;
     gap: 0;
+    height: 100%;
     border-radius: 1.65rem;
     overflow: hidden;
     text-decoration: none;
@@ -78,7 +80,7 @@
   }
 
   .card:hover {
-    transform: translateY(-4px);
+    transform: translateY(-2px);
     box-shadow: 0 28px 60px rgba(88, 54, 30, 0.14);
     border-color: rgba(195, 120, 66, 0.28);
   }
@@ -138,6 +140,7 @@
 
   .card-body {
     display: grid;
+    grid-template-rows: auto auto auto 1fr;
     gap: 1rem;
     padding: 1.25rem;
   }
@@ -155,6 +158,7 @@
     font-size: clamp(1.35rem, 2vw, 1.72rem);
     line-height: 1.1;
     color: #24160e;
+    min-height: 3.7rem;
   }
 
   .price {
@@ -167,6 +171,12 @@
     margin: 0;
     color: #5e5147;
     line-height: 1.68;
+    min-height: 5rem;
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
   }
 
   .facts {
@@ -203,6 +213,7 @@
     gap: 1rem;
     align-items: center;
     flex-wrap: wrap;
+    align-self: end;
   }
 
   .review-pill {

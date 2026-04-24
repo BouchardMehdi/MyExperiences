@@ -15,7 +15,7 @@ RUN composer install --no-dev --prefer-dist --no-interaction --optimize-autoload
 COPY . .
 
 RUN rm -f /etc/nginx/http.d/default.conf \
-    && mkdir -p /run/nginx /var/log/nginx /var/cache/nginx \
+    && mkdir -p /run/nginx /var/log/nginx /var/cache/nginx /var/www/app/var/cache /var/www/app/var/log \
     && composer dump-autoload --no-dev --classmap-authoritative \
     && chown -R www-data:www-data /var/www/app/var
 
@@ -24,4 +24,4 @@ COPY docker/php/app.ini /usr/local/etc/php/conf.d/app.ini
 
 EXPOSE 80
 
-CMD ["sh", "-c", "php-fpm -D && nginx -g 'daemon off;'"]
+CMD ["sh", "-c", "php bin/console doctrine:migrations:migrate --no-interaction && php-fpm -D && nginx -g 'daemon off;'"]

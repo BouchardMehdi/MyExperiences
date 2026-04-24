@@ -61,6 +61,22 @@ class OrganizerRequestRepository extends ServiceEntityRepository
             ->getResult();
     }
 
+    /**
+     * @return list<OrganizerRequest>
+     */
+    public function findRecentDetailed(int $limit = 50): array
+    {
+        return $this->createQueryBuilder('r')
+            ->join('r.user', 'u')
+            ->addSelect('u')
+            ->leftJoin('r.reviewedBy', 'reviewer')
+            ->addSelect('reviewer')
+            ->orderBy('r.createdAt', 'DESC')
+            ->setMaxResults(max(1, $limit))
+            ->getQuery()
+            ->getResult();
+    }
+
     public function findDetailedById(int $id): ?OrganizerRequest
     {
         return $this->createQueryBuilder('r')

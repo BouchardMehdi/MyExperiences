@@ -73,14 +73,21 @@
     bookingSuccess = '';
 
     try {
-      await createBooking(token, {
+      const response = await createBooking(token, {
         slotId: Number(selectedSlotId),
         seats
       });
+      const booking =
+        response.data && typeof response.data === 'object'
+          ? /** @type {Record<string, any>} */ (response.data)
+          : null;
 
-      bookingSuccess = 'Reservation creee. Vous pouvez la retrouver dans votre compte.';
-      await loadExperience(experienceId);
-      await goto(`${base}/account`, { keepFocus: true, noScroll: true });
+      if (!booking?.id) {
+        throw new Error('La reponse de reservation est incomplete.');
+      }
+
+      bookingSuccess = 'Reservation creee. Direction le paiement mock.';
+      await goto(`${base}/payment/${booking.id}`);
     } catch (exception) {
       bookingError = exception instanceof Error ? exception.message : 'Erreur inconnue.';
     } finally {

@@ -63,6 +63,19 @@ class AdminApiPresenter
     {
         $publishedCount = count(array_filter($experiences, static fn (Experience $experience): bool => 'PUBLISHED' === $experience->getStatus()->value));
         $organizerCount = count(array_filter($users, static fn (User $user): bool => $user->isOrganizer()));
+        $pendingOrganizerRequestCount = count(array_filter($organizerRequests, static fn (OrganizerRequest $request): bool => $request->isPending()));
+        $preValidatedOrganizerRequestCount = count(array_filter(
+            $organizerRequests,
+            static fn (OrganizerRequest $request): bool => 'PRE_VALIDATED' === $request->getScreeningStatus()->value
+        ));
+        $needsReviewOrganizerRequestCount = count(array_filter(
+            $organizerRequests,
+            static fn (OrganizerRequest $request): bool => 'NEEDS_REVIEW' === $request->getScreeningStatus()->value
+        ));
+        $autoRejectedOrganizerRequestCount = count(array_filter(
+            $organizerRequests,
+            static fn (OrganizerRequest $request): bool => 'AUTO_REJECTED' === $request->getScreeningStatus()->value
+        ));
 
         return [
             'stats' => [
@@ -71,7 +84,11 @@ class AdminApiPresenter
                 'experienceCount' => count($experiences),
                 'publishedExperienceCount' => $publishedCount,
                 'reviewCount' => count($reviews),
-                'pendingOrganizerRequestCount' => count($organizerRequests),
+                'organizerRequestCount' => count($organizerRequests),
+                'pendingOrganizerRequestCount' => $pendingOrganizerRequestCount,
+                'preValidatedOrganizerRequestCount' => $preValidatedOrganizerRequestCount,
+                'needsReviewOrganizerRequestCount' => $needsReviewOrganizerRequestCount,
+                'autoRejectedOrganizerRequestCount' => $autoRejectedOrganizerRequestCount,
             ],
             'users' => $this->presentUsers($users),
             'experiences' => $this->presentExperiences($experiences),

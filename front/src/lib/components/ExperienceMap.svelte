@@ -27,7 +27,8 @@
 
     map = leaflet.map(mapElement, {
       zoomControl: true,
-      scrollWheelZoom: false
+      scrollWheelZoom: true,
+      wheelDebounceTime: 35
     }).setView([46.603354, 1.888334], 5.4);
 
     leaflet

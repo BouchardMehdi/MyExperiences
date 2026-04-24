@@ -168,6 +168,17 @@ export async function fetchMyBookings(token) {
 
 /**
  * @param {string} token
+ * @param {number | string} bookingId
+ * @returns {Promise<ApiPayload>}
+ */
+export async function fetchBookingById(token, bookingId) {
+  return apiFetch(`/bookings/${bookingId}`, {
+    headers: createAuthHeaders(token)
+  });
+}
+
+/**
+ * @param {string} token
  * @param {{ slotId: number | string; seats: number | string }} payload
  * @returns {Promise<ApiPayload>}
  */

@@ -7,8 +7,7 @@
     cancelBooking,
     fetchCurrentUser,
     fetchMyBookings,
-    fetchOrganizerDashboard,
-    payBooking
+    fetchOrganizerDashboard
   } from '$lib/api/client';
   import { formatBookingStatus, formatPaymentStatus } from '$lib/utils/booking';
   import { formatDateTime, formatPrice } from '$lib/utils/experience';
@@ -25,8 +24,6 @@
   let bookingsFeedback = '';
   /** @type {number | null} */
   let cancellingBookingId = null;
-  /** @type {number | null} */
-  let payingBookingId = null;
   let bookingFilter = 'upcoming';
   let organizerFilter = 'upcoming';
 
@@ -251,41 +248,6 @@
     }
   }
 
-  /**
-   * @param {number} bookingId
-   * @param {'success' | 'failure'} outcome
-   */
-  async function handlePayBooking(bookingId, outcome) {
-    const token = getStoredAuthToken();
-
-    if (!token) {
-      await goto(`${base}/login`);
-      return;
-    }
-
-    payingBookingId = bookingId;
-    bookingsError = '';
-    bookingsFeedback = '';
-
-    try {
-      const response = await payBooking(token, bookingId, outcome);
-      const updatedBooking = response.data && typeof response.data === 'object' ? response.data : null;
-
-      if (!updatedBooking) {
-        throw new Error('La reponse de paiement est incomplete.');
-      }
-
-      bookings = bookings.map((booking) => (booking.id === bookingId ? updatedBooking : booking));
-      bookingsFeedback =
-        outcome === 'failure'
-          ? 'Le paiement mock a echoue et la reservation a ete annulee.'
-          : 'Le paiement mock a ete valide avec succes.';
-    } catch (exception) {
-      bookingsError = exception instanceof Error ? exception.message : 'Erreur inconnue.';
-    } finally {
-      payingBookingId = null;
-    }
-  }
 </script>
 
 <svelte:head>
@@ -399,30 +361,14 @@
 
               {#if booking.canPay}
                 <div class="action-row">
-                  <button
-                    class="primary-action"
-                    disabled={payingBookingId === booking.id || cancellingBookingId === booking.id}
-                    on:click={() => handlePayBooking(booking.id, 'success')}
-                    type="button"
-                  >
-                    {payingBookingId === booking.id ? 'Traitement...' : 'Payer (mock)'}
-                  </button>
-
-                  <button
-                    class="secondary-action ghost"
-                    disabled={payingBookingId === booking.id || cancellingBookingId === booking.id}
-                    on:click={() => handlePayBooking(booking.id, 'failure')}
-                    type="button"
-                  >
-                    Simuler un echec
-                  </button>
+                  <a class="primary-action" href={`${base}/payment/${booking.id}`}>Finaliser le paiement</a>
                 </div>
               {/if}
 
               {#if booking.canCancel}
                 <button
                   class="secondary-action"
-                  disabled={cancellingBookingId === booking.id || payingBookingId === booking.id}
+                  disabled={cancellingBookingId === booking.id}
                   on:click={() => handleCancelBooking(booking.id)}
                   type="button"
                 >
@@ -653,11 +599,6 @@
   .secondary-action {
     background: rgba(240, 229, 219, 0.95);
     color: #6d5341;
-  }
-
-  .secondary-action.ghost {
-    background: rgba(255, 244, 241, 0.92);
-    color: #8a473f;
   }
 
   .booking-list,

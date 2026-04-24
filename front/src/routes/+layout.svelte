@@ -163,6 +163,40 @@
     box-sizing: border-box;
   }
 
+  :global(select) {
+    appearance: none;
+    padding-right: 2.65rem;
+    background-image:
+      linear-gradient(45deg, transparent 50%, #8a3f25 50%),
+      linear-gradient(135deg, #8a3f25 50%, transparent 50%);
+    background-position:
+      calc(100% - 1.15rem) 50%,
+      calc(100% - 0.78rem) 50%;
+    background-size:
+      0.42rem 0.42rem,
+      0.42rem 0.42rem;
+    background-repeat: no-repeat;
+    color: var(--text-main);
+  }
+
+  :global(select:focus-visible) {
+    outline: 3px solid rgba(180, 90, 52, 0.22);
+    border-color: rgba(138, 63, 37, 0.42);
+  }
+
+  :global(select option) {
+    background: #fffaf4;
+    color: var(--text-main);
+    font: inherit;
+    padding: 0.75rem 1rem;
+  }
+
+  :global(select option:checked) {
+    background: #f0ded0;
+    color: var(--accent-dark);
+    font-weight: 800;
+  }
+
   .app-shell {
     position: relative;
     min-height: 100vh;

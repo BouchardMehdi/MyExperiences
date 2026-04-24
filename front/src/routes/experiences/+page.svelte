@@ -600,6 +600,7 @@
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
     gap: 1rem;
+    align-items: stretch;
   }
 
   .status-panel {

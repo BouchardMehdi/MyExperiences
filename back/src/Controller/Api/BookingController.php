@@ -48,6 +48,7 @@ class BookingController extends AbstractController
         Request $request,
         ValidatorInterface $validator,
         SlotRepository $slotRepository,
+        BookingRepository $bookingRepository,
         BookingService $bookingService,
         EntityManagerInterface $entityManager,
         BookingApiPresenter $bookingApiPresenter,
@@ -104,6 +105,32 @@ class BookingController extends AbstractController
         return $this->json([
             'data' => $bookingApiPresenter->present($booking),
         ], Response::HTTP_CREATED);
+    }
+
+    #[Route('/{id<\d+>}', name: 'show', methods: ['GET'])]
+    public function show(
+        int $id,
+        BookingRepository $bookingRepository,
+        BookingApiPresenter $bookingApiPresenter,
+    ): JsonResponse {
+        $user = $this->getAuthenticatedUser();
+        if ($user instanceof JsonResponse) {
+            return $user;
+        }
+
+        $booking = $bookingRepository->findDetailedByIdForUser($id, $user);
+        if (!$booking) {
+            return $this->json([
+                'error' => [
+                    'code' => 'booking_not_found',
+                    'message' => 'Booking not found.',
+                ],
+            ], Response::HTTP_NOT_FOUND);
+        }
+
+        return $this->json([
+            'data' => $bookingApiPresenter->present($booking),
+        ]);
     }
 
     #[Route('/{id<\d+>}/cancel', name: 'cancel', methods: ['POST'])]

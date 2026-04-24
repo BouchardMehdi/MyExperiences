@@ -653,8 +653,11 @@
 
   .checkbox-card {
     display: flex;
+    flex-direction: row-reverse;
+    justify-content: space-between;
     align-items: center;
     gap: 0.6rem;
+    min-height: 4.25rem;
     padding: 0.85rem 0.95rem;
     border-radius: 1rem;
     border: 1px solid rgba(143, 108, 82, 0.16);
@@ -668,9 +671,12 @@
   }
 
   .checkbox-card input {
+    width: 1rem;
+    height: 1rem;
     min-height: auto;
     margin: 0;
     padding: 0;
+    flex: 0 0 auto;
   }
 
   .checkbox-card span {
@@ -678,6 +684,7 @@
     text-transform: none;
     letter-spacing: 0;
     color: #3a2920;
+    line-height: 1.35;
   }
 
   .request-summary {

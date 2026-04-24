@@ -68,6 +68,28 @@
       currentUser.roles.includes('ROLE_ADMIN')
     );
   }
+
+  function getPublicRoleLabels() {
+    if (!currentUser || !Array.isArray(currentUser.roles)) {
+      return ['Utilisateur'];
+    }
+
+    const labels = [];
+
+    if (currentUser.roles.includes('ROLE_ADMIN')) {
+      labels.push('Administrateur');
+    }
+
+    if (currentUser.roles.includes('ROLE_ORGANIZER')) {
+      labels.push('Organisateur');
+    }
+
+    if (currentUser.roles.includes('ROLE_USER') || labels.length === 0) {
+      labels.push('Utilisateur');
+    }
+
+    return labels;
+  }
 </script>
 
 <svelte:head>
@@ -113,7 +135,7 @@
           </div>
           <div>
             <dt>Roles</dt>
-            <dd>{Array.isArray(currentUser.roles) ? currentUser.roles.join(', ') : 'ROLE_USER'}</dd>
+            <dd>{getPublicRoleLabels().join(', ')}</dd>
           </div>
         </dl>
       </article>

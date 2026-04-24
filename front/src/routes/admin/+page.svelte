@@ -35,6 +35,27 @@
   /** @type {Record<number, AdminExperienceDraft>} */
   let experienceDrafts = {};
   let processingKey = '';
+  let adminSection = 'requests';
+  let requestStatusFilter = 'PENDING';
+  let requestScreeningFilter = 'ALL';
+  let adminSearch = '';
+  let userSearch = '';
+  let userRoleFilter = 'ALL';
+  let experienceSearch = '';
+  let experienceStatusFilter = 'ALL';
+  let reviewSearch = '';
+  let reviewRatingFilter = 'ALL';
+  let requestPage = 1;
+  let userPage = 1;
+  let experiencePage = 1;
+  let reviewPage = 1;
+  /** @type {Record<number, boolean>} */
+  let expandedOrganizerRequests = {};
+
+  const REQUESTS_PER_PAGE = 5;
+  const USERS_PER_PAGE = 5;
+  const EXPERIENCES_PER_PAGE = 3;
+  const REVIEWS_PER_PAGE = 5;
 
   onMount(async () => {
     const token = getStoredAuthToken();
@@ -127,6 +148,232 @@
 
     return 'ROLE_USER';
   }
+
+  /**
+   * @param {any[]} checks
+   * @param {string} status
+   */
+  function countChecksByStatus(checks, status) {
+    return Array.isArray(checks)
+      ? checks.filter((check) => check && check.status === status).length
+      : 0;
+  }
+
+  /**
+   * @param {Record<string, any>} organizerRequest
+   */
+  function getRequestDecisionLabel(organizerRequest) {
+    if (organizerRequest.status === 'APPROVED') {
+      return 'Approuvee';
+    }
+
+    if (organizerRequest.status === 'REJECTED') {
+      return organizerRequest.screening?.isAutoRejected ? 'Refus automatique' : 'Refusee';
+    }
+
+    if (organizerRequest.screening?.status === 'PRE_VALIDATED') {
+      return 'Priorite validation';
+    }
+
+    if (organizerRequest.screening?.status === 'AUTO_REJECTED') {
+      return 'Refus automatique';
+    }
+
+    return 'A verifier';
+  }
+
+  /**
+   * @param {Record<string, any>} organizerRequest
+   */
+  function matchesRequestFilters(organizerRequest) {
+    const statusMatches =
+      requestStatusFilter === 'ALL' || organizerRequest.status === requestStatusFilter;
+    const screeningMatches =
+      requestScreeningFilter === 'ALL' || organizerRequest.screening?.status === requestScreeningFilter;
+    const query = adminSearch.trim().toLowerCase();
+
+    if (!statusMatches || !screeningMatches) {
+      return false;
+    }
+
+    if (!query) {
+      return true;
+    }
+
+    const haystack = [
+      organizerRequest.organizationName,
+      organizerRequest.user?.fullName,
+      organizerRequest.user?.email,
+      organizerRequest.city,
+      organizerRequest.postalCode,
+      organizerRequest.siret,
+      organizerRequest.businessTypeLabel,
+      ...(Array.isArray(organizerRequest.eventTypeLabels) ? organizerRequest.eventTypeLabels : [])
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
+
+    return haystack.includes(query);
+  }
+
+  /**
+   * @param {Record<string, any>} user
+   */
+  function matchesUserFilters(user) {
+    const roleMatches = userRoleFilter === 'ALL' || getRoleProfile(user.roles || []) === userRoleFilter;
+    const query = userSearch.trim().toLowerCase();
+
+    if (!roleMatches) {
+      return false;
+    }
+
+    if (!query) {
+      return true;
+    }
+
+    return [user.fullName, user.email, user.firstName, user.lastName]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase()
+      .includes(query);
+  }
+
+  /**
+   * @param {Record<string, any>} experience
+   */
+  function matchesExperienceFilters(experience) {
+    const statusMatches =
+      experienceStatusFilter === 'ALL' || experience.status === experienceStatusFilter;
+    const query = experienceSearch.trim().toLowerCase();
+
+    if (!statusMatches) {
+      return false;
+    }
+
+    if (!query) {
+      return true;
+    }
+
+    return [
+      experience.title,
+      experience.location,
+      experience.organizer?.fullName,
+      experience.organizer?.email,
+      experience.description
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase()
+      .includes(query);
+  }
+
+  /**
+   * @param {Record<string, any>} review
+   */
+  function matchesReviewFilters(review) {
+    const ratingMatches =
+      reviewRatingFilter === 'ALL' || Number(review.rating) === Number(reviewRatingFilter);
+    const query = reviewSearch.trim().toLowerCase();
+
+    if (!ratingMatches) {
+      return false;
+    }
+
+    if (!query) {
+      return true;
+    }
+
+    return [review.comment, review.author?.fullName, review.author?.email, review.experience?.title]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase()
+      .includes(query);
+  }
+
+  /**
+   * @param {any[]} items
+   * @param {number} page
+   * @param {number} pageSize
+   */
+  function paginate(items, page, pageSize) {
+    return items.slice((page - 1) * pageSize, page * pageSize);
+  }
+
+  /**
+   * @param {number} total
+   * @param {number} pageSize
+   */
+  function pageCount(total, pageSize) {
+    return Math.max(1, Math.ceil(total / pageSize));
+  }
+
+  /**
+   * @param {number} requestId
+   */
+  function toggleOrganizerRequest(requestId) {
+    expandedOrganizerRequests = {
+      ...expandedOrganizerRequests,
+      [requestId]: !expandedOrganizerRequests[requestId]
+    };
+  }
+
+  $: organizerRequests = Array.isArray(dashboard?.organizerRequests)
+    ? dashboard.organizerRequests
+    : [];
+  $: filteredOrganizerRequests = organizerRequests
+    .filter((organizerRequest) => {
+      requestStatusFilter;
+      requestScreeningFilter;
+      adminSearch;
+      return matchesRequestFilters(organizerRequest);
+    });
+  $: requestTotalPages = pageCount(filteredOrganizerRequests.length, REQUESTS_PER_PAGE);
+  $: if (requestPage > requestTotalPages) {
+    requestPage = requestTotalPages;
+  }
+  $: paginatedOrganizerRequests = paginate(filteredOrganizerRequests, requestPage, REQUESTS_PER_PAGE);
+  $: pendingOrganizerRequests = organizerRequests.filter((request) => request.status === 'PENDING');
+  $: criticalOrganizerRequests = pendingOrganizerRequests.filter(
+    (request) => request.screening?.status === 'PRE_VALIDATED' || request.screening?.status === 'AUTO_REJECTED'
+  );
+  $: users = Array.isArray(dashboard?.users) ? dashboard.users : [];
+  $: filteredUsers = users.filter((user) => {
+    userRoleFilter;
+    userSearch;
+    return matchesUserFilters(user);
+  });
+  $: userTotalPages = pageCount(filteredUsers.length, USERS_PER_PAGE);
+  $: if (userPage > userTotalPages) {
+    userPage = userTotalPages;
+  }
+  $: paginatedUsers = paginate(filteredUsers, userPage, USERS_PER_PAGE);
+  $: experiences = Array.isArray(dashboard?.experiences) ? dashboard.experiences : [];
+  $: filteredExperiences = experiences.filter((experience) => {
+    experienceStatusFilter;
+    experienceSearch;
+    return matchesExperienceFilters(experience);
+  });
+  $: experienceTotalPages = pageCount(filteredExperiences.length, EXPERIENCES_PER_PAGE);
+  $: if (experiencePage > experienceTotalPages) {
+    experiencePage = experienceTotalPages;
+  }
+  $: paginatedExperiences = paginate(filteredExperiences, experiencePage, EXPERIENCES_PER_PAGE);
+  $: reviews = Array.isArray(dashboard?.reviews) ? dashboard.reviews : [];
+  $: filteredReviews = reviews.filter((review) => {
+    reviewRatingFilter;
+    reviewSearch;
+    return matchesReviewFilters(review);
+  });
+  $: reviewTotalPages = pageCount(filteredReviews.length, REVIEWS_PER_PAGE);
+  $: if (reviewPage > reviewTotalPages) {
+    reviewPage = reviewTotalPages;
+  }
+  $: paginatedReviews = paginate(filteredReviews, reviewPage, REVIEWS_PER_PAGE);
+  $: requestStatusFilter, requestScreeningFilter, adminSearch, (requestPage = 1);
+  $: userRoleFilter, userSearch, (userPage = 1);
+  $: experienceStatusFilter, experienceSearch, (experiencePage = 1);
+  $: reviewRatingFilter, reviewSearch, (reviewPage = 1);
 
   /**
    * @param {number} userId
@@ -327,7 +574,11 @@
         </article>
         <article class="stat-card">
           <strong>{dashboard.stats?.pendingOrganizerRequestCount || 0}</strong>
-          <span>Demandes organisateur</span>
+          <span>Demandes en attente</span>
+        </article>
+        <article class="stat-card accent">
+          <strong>{dashboard.stats?.preValidatedOrganizerRequestCount || 0}</strong>
+          <span>Pre-validees</span>
         </article>
       </div>
     </div>
@@ -340,15 +591,77 @@
       <p class="inline-success">{success}</p>
     {/if}
 
+    <nav class="section-tabs" aria-label="Sections admin">
+      <button class:active={adminSection === 'requests'} on:click={() => (adminSection = 'requests')} type="button">
+        Demandes
+        <span>{dashboard.stats?.pendingOrganizerRequestCount || 0}</span>
+      </button>
+      <button class:active={adminSection === 'users'} on:click={() => (adminSection = 'users')} type="button">
+        Utilisateurs
+        <span>{dashboard.stats?.userCount || 0}</span>
+      </button>
+      <button class:active={adminSection === 'experiences'} on:click={() => (adminSection = 'experiences')} type="button">
+        Experiences
+        <span>{dashboard.stats?.experienceCount || 0}</span>
+      </button>
+      <button class:active={adminSection === 'reviews'} on:click={() => (adminSection = 'reviews')} type="button">
+        Avis
+        <span>{dashboard.stats?.reviewCount || 0}</span>
+      </button>
+    </nav>
+
+    {#if adminSection === 'requests'}
     <section class="panel">
       <div class="panel-head">
-        <span class="eyebrow">Demandes</span>
-        <h2>Demandes organisateur</h2>
+        <div>
+          <span class="eyebrow">Demandes</span>
+          <h2>File organisateur</h2>
+        </div>
+        <div class="panel-metrics">
+          <div>
+            <strong>{criticalOrganizerRequests.length}</strong>
+            <span>A traiter vite</span>
+          </div>
+          <div>
+            <strong>{dashboard.stats?.needsReviewOrganizerRequestCount || 0}</strong>
+            <span>A revoir</span>
+          </div>
+          <div>
+            <strong>{dashboard.stats?.autoRejectedOrganizerRequestCount || 0}</strong>
+            <span>Refus auto</span>
+          </div>
+        </div>
       </div>
 
-      {#if dashboard.organizerRequests?.length}
+      <div class="admin-toolbar">
+        <label>
+          <span>Recherche</span>
+          <input bind:value={adminSearch} placeholder="Nom, email, ville, SIRET..." type="search" />
+        </label>
+        <label>
+          <span>Statut dossier</span>
+          <select bind:value={requestStatusFilter}>
+            <option value="ALL">Tous</option>
+            <option value="PENDING">En attente</option>
+            <option value="APPROVED">Approuves</option>
+            <option value="REJECTED">Refuses</option>
+          </select>
+        </label>
+        <label>
+          <span>Pre-tri</span>
+          <select bind:value={requestScreeningFilter}>
+            <option value="ALL">Tous</option>
+            <option value="PRE_VALIDATED">Pre-valides</option>
+            <option value="NEEDS_REVIEW">A revoir</option>
+            <option value="AUTO_REJECTED">Refus auto</option>
+          </select>
+        </label>
+      </div>
+
+      {#if organizerRequests.length}
+        {#if filteredOrganizerRequests.length}
         <div class="card-list">
-          {#each dashboard.organizerRequests as organizerRequest (organizerRequest.id)}
+          {#each paginatedOrganizerRequests as organizerRequest (organizerRequest.id)}
             <article class="card">
               <header class="card-head">
                 <div>
@@ -360,8 +673,24 @@
                   {#if organizerRequest.screening?.label}
                     <span class="status-chip screening">{organizerRequest.screening.label}</span>
                   {/if}
+                  <span class="status-chip decision">{getRequestDecisionLabel(organizerRequest)}</span>
                 </div>
               </header>
+
+              <div class="decision-strip">
+                <div>
+                  <strong>{countChecksByStatus(organizerRequest.screening?.checks, 'passed')}</strong>
+                  <span>valides</span>
+                </div>
+                <div>
+                  <strong>{countChecksByStatus(organizerRequest.screening?.checks, 'warning')}</strong>
+                  <span>alertes</span>
+                </div>
+                <div>
+                  <strong>{countChecksByStatus(organizerRequest.screening?.checks, 'failed')}</strong>
+                  <span>bloquants</span>
+                </div>
+              </div>
 
               <div class="request-overview">
                 <div>
@@ -385,11 +714,20 @@
                   <strong>{organizerRequest.siret}</strong>
                 </div>
                 <div>
-                  <span>Site web</span>
-                  <strong>{organizerRequest.websiteUrl || 'Non renseigne'}</strong>
+                  <span>Evenements</span>
+                  <strong>{Array.isArray(organizerRequest.eventTypeLabels) ? organizerRequest.eventTypeLabels.slice(0, 2).join(', ') : 'Non renseigne'}</strong>
                 </div>
               </div>
 
+              <button
+                class="link-button"
+                on:click={() => toggleOrganizerRequest(organizerRequest.id)}
+                type="button"
+              >
+                {expandedOrganizerRequests[organizerRequest.id] ? 'Voir moins' : 'Voir plus'}
+              </button>
+
+              {#if expandedOrganizerRequests[organizerRequest.id]}
               <p class="address-line">
                 {organizerRequest.streetAddress}, {organizerRequest.postalCode} {organizerRequest.city}, {organizerRequest.country}
               </p>
@@ -444,9 +782,16 @@
                     <p>{organizerRequest.socialLinks}</p>
                   </div>
                 {/if}
+
+                <div>
+                  <span>Site web</span>
+                  <p>{organizerRequest.websiteUrl || 'Non renseigne'}</p>
+                </div>
               </div>
+              {/if}
 
               <div class="action-row">
+                {#if organizerRequest.status === 'PENDING'}
                 <button
                   class="primary"
                   disabled={processingKey === `approve-request-${organizerRequest.id}`}
@@ -463,24 +808,60 @@
                 >
                   {processingKey === `reject-request-${organizerRequest.id}` ? 'Refus...' : 'Refuser'}
                 </button>
+                {:else}
+                  <span class="processed-note">
+                    Dossier traite {organizerRequest.processedAt ? `le ${formatDateTime(organizerRequest.processedAt)}` : ''}
+                    {organizerRequest.reviewedBy?.fullName ? ` par ${organizerRequest.reviewedBy.fullName}` : ''}
+                  </span>
+                {/if}
               </div>
             </article>
           {/each}
         </div>
+        <div class="pagination">
+          <span>{filteredOrganizerRequests.length} demande{filteredOrganizerRequests.length > 1 ? 's' : ''}</span>
+          <div>
+            <button class="secondary" disabled={requestPage === 1} on:click={() => (requestPage -= 1)} type="button">Precedent</button>
+            <span>Page {requestPage} / {requestTotalPages}</span>
+            <button class="secondary" disabled={requestPage === requestTotalPages} on:click={() => (requestPage += 1)} type="button">Suivant</button>
+          </div>
+        </div>
+        {:else}
+          <p class="empty">Aucune demande ne correspond aux filtres actuels.</p>
+        {/if}
       {:else}
-        <p class="empty">Aucune demande organisateur en attente.</p>
+        <p class="empty">Aucune demande organisateur a afficher.</p>
       {/if}
     </section>
+    {/if}
 
+    {#if adminSection === 'users'}
     <section class="panel">
       <div class="panel-head">
         <span class="eyebrow">Utilisateurs</span>
         <h2>Gestion des comptes</h2>
       </div>
 
-      {#if dashboard.users?.length}
+      <div class="admin-toolbar two-columns">
+        <label>
+          <span>Recherche</span>
+          <input bind:value={userSearch} placeholder="Nom, email..." type="search" />
+        </label>
+        <label>
+          <span>Role</span>
+          <select bind:value={userRoleFilter}>
+            <option value="ALL">Tous</option>
+            <option value="ROLE_USER">Utilisateurs</option>
+            <option value="ROLE_ORGANIZER">Organisateurs</option>
+            <option value="ROLE_ADMIN">Admins</option>
+          </select>
+        </label>
+      </div>
+
+      {#if users.length}
+        {#if filteredUsers.length}
         <div class="card-list">
-          {#each dashboard.users as user (user.id)}
+          {#each paginatedUsers as user (user.id)}
             <article class="card">
               <header class="card-head">
                 <div>
@@ -523,20 +904,50 @@
             </article>
           {/each}
         </div>
+        <div class="pagination">
+          <span>{filteredUsers.length} compte{filteredUsers.length > 1 ? 's' : ''}</span>
+          <div>
+            <button class="secondary" disabled={userPage === 1} on:click={() => (userPage -= 1)} type="button">Precedent</button>
+            <span>Page {userPage} / {userTotalPages}</span>
+            <button class="secondary" disabled={userPage === userTotalPages} on:click={() => (userPage += 1)} type="button">Suivant</button>
+          </div>
+        </div>
+        {:else}
+          <p class="empty">Aucun utilisateur ne correspond aux filtres actuels.</p>
+        {/if}
       {:else}
         <p class="empty">Aucun utilisateur a afficher.</p>
       {/if}
     </section>
+    {/if}
 
+    {#if adminSection === 'experiences'}
     <section class="panel">
       <div class="panel-head">
         <span class="eyebrow">Experiences</span>
         <h2>Gestion globale des experiences</h2>
       </div>
 
-      {#if dashboard.experiences?.length}
+      <div class="admin-toolbar two-columns">
+        <label>
+          <span>Recherche</span>
+          <input bind:value={experienceSearch} placeholder="Titre, lieu, organisateur..." type="search" />
+        </label>
+        <label>
+          <span>Statut</span>
+          <select bind:value={experienceStatusFilter}>
+            <option value="ALL">Tous</option>
+            <option value="DRAFT">Brouillons</option>
+            <option value="PUBLISHED">Publiees</option>
+            <option value="ARCHIVED">Archivees</option>
+          </select>
+        </label>
+      </div>
+
+      {#if experiences.length}
+        {#if filteredExperiences.length}
         <div class="card-list">
-          {#each dashboard.experiences as experience (experience.id)}
+          {#each paginatedExperiences as experience (experience.id)}
             <article class="card">
               <header class="card-head">
                 <div>
@@ -597,20 +1008,52 @@
             </article>
           {/each}
         </div>
+        <div class="pagination">
+          <span>{filteredExperiences.length} experience{filteredExperiences.length > 1 ? 's' : ''}</span>
+          <div>
+            <button class="secondary" disabled={experiencePage === 1} on:click={() => (experiencePage -= 1)} type="button">Precedent</button>
+            <span>Page {experiencePage} / {experienceTotalPages}</span>
+            <button class="secondary" disabled={experiencePage === experienceTotalPages} on:click={() => (experiencePage += 1)} type="button">Suivant</button>
+          </div>
+        </div>
+        {:else}
+          <p class="empty">Aucune experience ne correspond aux filtres actuels.</p>
+        {/if}
       {:else}
         <p class="empty">Aucune experience a moderer.</p>
       {/if}
     </section>
+    {/if}
 
+    {#if adminSection === 'reviews'}
     <section class="panel">
       <div class="panel-head">
         <span class="eyebrow">Moderation</span>
         <h2>Avis publies</h2>
       </div>
 
-      {#if dashboard.reviews?.length}
+      <div class="admin-toolbar two-columns">
+        <label>
+          <span>Recherche</span>
+          <input bind:value={reviewSearch} placeholder="Commentaire, auteur, experience..." type="search" />
+        </label>
+        <label>
+          <span>Note</span>
+          <select bind:value={reviewRatingFilter}>
+            <option value="ALL">Toutes</option>
+            <option value="5">5/5</option>
+            <option value="4">4/5</option>
+            <option value="3">3/5</option>
+            <option value="2">2/5</option>
+            <option value="1">1/5</option>
+          </select>
+        </label>
+      </div>
+
+      {#if reviews.length}
+        {#if filteredReviews.length}
         <div class="card-list">
-          {#each dashboard.reviews as review (review.id)}
+          {#each paginatedReviews as review (review.id)}
             <article class="card">
               <header class="card-head">
                 <div>
@@ -633,10 +1076,22 @@
             </article>
           {/each}
         </div>
+        <div class="pagination">
+          <span>{filteredReviews.length} avis</span>
+          <div>
+            <button class="secondary" disabled={reviewPage === 1} on:click={() => (reviewPage -= 1)} type="button">Precedent</button>
+            <span>Page {reviewPage} / {reviewTotalPages}</span>
+            <button class="secondary" disabled={reviewPage === reviewTotalPages} on:click={() => (reviewPage += 1)} type="button">Suivant</button>
+          </div>
+        </div>
+        {:else}
+          <p class="empty">Aucun avis ne correspond aux filtres actuels.</p>
+        {/if}
       {:else}
         <p class="empty">Aucun avis a moderer.</p>
       {/if}
     </section>
+    {/if}
   </section>
 {/if}
 
@@ -692,12 +1147,16 @@
   }
 
   .panel-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: start;
     margin-bottom: 1rem;
   }
 
   .stats-grid {
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: 0.85rem;
     margin-top: 1.2rem;
   }
@@ -718,6 +1177,91 @@
 
   .stat-card strong {
     font-size: 1.8rem;
+  }
+
+  .stat-card.accent {
+    background: rgba(235, 246, 241, 0.86);
+    border-color: rgba(31, 126, 92, 0.16);
+  }
+
+  .section-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+    padding: 0.65rem;
+    border-radius: 1.4rem;
+    background: rgba(255, 252, 248, 0.88);
+    border: 1px solid rgba(139, 95, 61, 0.12);
+    box-shadow: 0 14px 45px rgba(88, 54, 30, 0.06);
+  }
+
+  .section-tabs button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    min-height: 2.7rem;
+    padding: 0.65rem 0.9rem;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: #604c3f;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .section-tabs button.active {
+    background: #8d5430;
+    color: #fff9f1;
+  }
+
+  .section-tabs span {
+    display: inline-grid;
+    place-items: center;
+    min-width: 1.7rem;
+    min-height: 1.7rem;
+    padding: 0 0.35rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.35);
+  }
+
+  .panel-metrics {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(5rem, 1fr));
+    gap: 0.55rem;
+    min-width: min(100%, 24rem);
+  }
+
+  .panel-metrics div {
+    padding: 0.8rem;
+    border-radius: 1rem;
+    background: rgba(255, 255, 255, 0.78);
+    border: 1px solid rgba(143, 108, 82, 0.12);
+  }
+
+  .panel-metrics strong {
+    display: block;
+    color: #24160e;
+    font-size: 1.35rem;
+  }
+
+  .panel-metrics span {
+    color: #7a6555;
+    font-size: 0.86rem;
+  }
+
+  .admin-toolbar {
+    display: grid;
+    grid-template-columns: minmax(16rem, 1.5fr) minmax(11rem, 0.8fr) minmax(11rem, 0.8fr);
+    gap: 0.8rem;
+    margin-bottom: 1rem;
+    padding: 0.9rem;
+    border-radius: 1.2rem;
+    background: rgba(247, 239, 229, 0.58);
+  }
+
+  .admin-toolbar.two-columns {
+    grid-template-columns: minmax(16rem, 1.5fr) minmax(11rem, 0.8fr);
   }
 
   .card-list {
@@ -785,6 +1329,18 @@
     font-weight: 700;
   }
 
+  .link-button {
+    display: inline-flex;
+    margin: 1rem 0 0.65rem;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #8d5430;
+    font: inherit;
+    font-weight: 800;
+    cursor: pointer;
+  }
+
   .request-copy {
     display: grid;
     gap: 0.75rem;
@@ -802,6 +1358,36 @@
   .status-chip.screening {
     background: rgba(233, 238, 246, 0.9);
     color: #44576f;
+  }
+
+  .status-chip.decision {
+    background: rgba(236, 247, 240, 0.9);
+    color: #2f6e58;
+  }
+
+  .decision-strip {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.6rem;
+    margin-top: 1rem;
+  }
+
+  .decision-strip div {
+    padding: 0.8rem 0.9rem;
+    border-radius: 1rem;
+    background: rgba(255, 255, 255, 0.78);
+    border: 1px solid rgba(143, 108, 82, 0.12);
+  }
+
+  .decision-strip strong {
+    display: block;
+    color: #24160e;
+    font-size: 1.35rem;
+  }
+
+  .decision-strip span {
+    color: #7a6555;
+    font-size: 0.9rem;
   }
 
   .check-list,
@@ -898,6 +1484,8 @@
     flex-wrap: wrap;
     gap: 0.75rem;
     grid-column: 1 / -1;
+    align-items: center;
+    margin-top: 0.9rem;
   }
 
   .primary,
@@ -936,6 +1524,32 @@
     color: #7a6555;
   }
 
+  .processed-note {
+    color: #6f5b4d;
+    font-weight: 700;
+  }
+
+  .pagination {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.9rem;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: 1rem;
+    padding: 0.8rem 0.95rem;
+    border-radius: 1rem;
+    background: rgba(247, 239, 229, 0.58);
+    color: #6f5b4d;
+    font-weight: 700;
+  }
+
+  .pagination div {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    flex-wrap: wrap;
+  }
+
   .inline-error,
   .status-panel.error,
   .inline-success {
@@ -967,8 +1581,15 @@
 
   @media (max-width: 900px) {
     .stats-grid,
-    .grid-form {
+    .grid-form,
+    .admin-toolbar,
+    .admin-toolbar.two-columns,
+    .panel-metrics {
       grid-template-columns: 1fr;
+    }
+
+    .panel-head {
+      flex-direction: column;
     }
 
     .request-overview {

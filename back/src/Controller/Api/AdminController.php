@@ -41,7 +41,7 @@ class AdminController extends AbstractController
         $users = $userRepository->findAllDetailed();
         $experiences = $experienceRepository->findAllDetailed();
         $reviews = $reviewRepository->findAllDetailed();
-        $organizerRequests = $organizerRequestRepository->findPendingDetailed();
+        $organizerRequests = $organizerRequestRepository->findRecentDetailed();
 
         return $this->json([
             'data' => $adminApiPresenter->presentDashboard($users, $experiences, $reviews, $organizerRequests),
