@@ -58,3 +58,46 @@ export function formatDuration(minutes) {
 
   return `${hours} h ${remainingMinutes} min`;
 }
+
+/**
+ * @param {{ latitude: number; longitude: number } | null | undefined} from
+ * @param {{ latitude: number; longitude: number } | null | undefined} to
+ * @returns {number | null}
+ */
+export function calculateDistanceKm(from, to) {
+  if (
+    !from ||
+    !to ||
+    !Number.isFinite(from.latitude) ||
+    !Number.isFinite(from.longitude) ||
+    !Number.isFinite(to.latitude) ||
+    !Number.isFinite(to.longitude)
+  ) {
+    return null;
+  }
+
+  const earthRadiusKm = 6371;
+  const latitudeDelta = toRadians(to.latitude - from.latitude);
+  const longitudeDelta = toRadians(to.longitude - from.longitude);
+  const fromLatitude = toRadians(from.latitude);
+  const toLatitude = toRadians(to.latitude);
+
+  const a =
+    Math.sin(latitudeDelta / 2) * Math.sin(latitudeDelta / 2) +
+    Math.cos(fromLatitude) *
+      Math.cos(toLatitude) *
+      Math.sin(longitudeDelta / 2) *
+      Math.sin(longitudeDelta / 2);
+
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return earthRadiusKm * c;
+}
+
+/**
+ * @param {number} value
+ * @returns {number}
+ */
+function toRadians(value) {
+  return (value * Math.PI) / 180;
+}

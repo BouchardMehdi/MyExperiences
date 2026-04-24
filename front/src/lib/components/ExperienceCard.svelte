@@ -8,15 +8,21 @@
 
   $: reviewCount = Number(experience?.reviewSummary?.count || 0);
   $: reviewAverage = experience?.reviewSummary?.averageRating || '0.0';
+  $: distanceLabel = experience?.distanceKm != null ? `${experience.distanceKm.toFixed(1)} km` : null;
 </script>
 
 <a class="card" href={`${base}/experiences/${experience.id}`}>
   <div class="card-image">
     <div class="card-overlay">
       <span class="location">{experience.location}</span>
-      <span class:bookable={experience.booking?.isBookable} class="availability">
-        {experience.booking?.isBookable ? 'Reservable' : 'A surveiller'}
-      </span>
+      <div class="overlay-side">
+        {#if distanceLabel}
+          <span class="distance">{distanceLabel}</span>
+        {/if}
+        <span class:bookable={experience.booking?.isBookable} class="availability">
+          {experience.booking?.isBookable ? 'Reservable' : 'A surveiller'}
+        </span>
+      </div>
     </div>
   </div>
 
@@ -96,8 +102,15 @@
     letter-spacing: 0.08em;
   }
 
+  .overlay-side {
+    display: grid;
+    justify-items: end;
+    gap: 0.45rem;
+  }
+
   .location,
-  .availability {
+  .availability,
+  .distance {
     padding: 0.42rem 0.78rem;
     border-radius: 999px;
     font-weight: 700;
@@ -111,6 +124,11 @@
   .availability {
     background: rgba(255, 245, 236, 0.9);
     color: #694f3d;
+  }
+
+  .distance {
+    background: rgba(255, 251, 246, 0.86);
+    color: #6b4c39;
   }
 
   .availability.bookable {

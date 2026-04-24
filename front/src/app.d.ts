@@ -3,4 +3,6 @@ declare global {
   }
 }
 
+declare module 'leaflet';
+
 export {};

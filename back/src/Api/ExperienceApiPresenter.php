@@ -35,6 +35,7 @@ class ExperienceApiPresenter
             'title' => $experience->getTitle(),
             'description' => $experience->getDescription(),
             'location' => $experience->getLocation(),
+            'coordinates' => $this->presentCoordinates($experience),
             'price' => $this->presentPrice($experience->getPrice()),
             'durationMinutes' => $experience->getDuration(),
             'status' => $experience->getStatus()->value,
@@ -75,6 +76,7 @@ class ExperienceApiPresenter
             'title' => $experience->getTitle(),
             'summary' => $this->buildSummary($experience->getDescription()),
             'location' => $experience->getLocation(),
+            'coordinates' => $this->presentCoordinates($experience),
             'price' => $this->presentPrice($experience->getPrice()),
             'durationMinutes' => $experience->getDuration(),
             'status' => $experience->getStatus()->value,
@@ -99,6 +101,24 @@ class ExperienceApiPresenter
         return [
             'amount' => $amount ?? '0.00',
             'currency' => 'EUR',
+        ];
+    }
+
+    /**
+     * @return array{latitude: float, longitude: float}|null
+     */
+    private function presentCoordinates(Experience $experience): ?array
+    {
+        $latitude = $experience->getLatitude();
+        $longitude = $experience->getLongitude();
+
+        if (null === $latitude || null === $longitude) {
+            return null;
+        }
+
+        return [
+            'latitude' => (float) $latitude,
+            'longitude' => (float) $longitude,
         ];
     }
 

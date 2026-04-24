@@ -41,6 +41,12 @@ class Experience
     #[Assert\Length(max: 255)]
     private ?string $location = null;
 
+    #[ORM\Column(type: Types::DECIMAL, precision: 9, scale: 6, nullable: true)]
+    private ?string $latitude = null;
+
+    #[ORM\Column(type: Types::DECIMAL, precision: 9, scale: 6, nullable: true)]
+    private ?string $longitude = null;
+
     #[ORM\Column]
     #[Assert\NotBlank(message: 'La duree est requise.')]
     #[Assert\Positive(message: 'La duree doit etre superieure a 0 minute.')]
@@ -126,6 +132,30 @@ class Experience
     public function setLocation(string $location): static
     {
         $this->location = trim($location);
+
+        return $this;
+    }
+
+    public function getLatitude(): ?string
+    {
+        return $this->latitude;
+    }
+
+    public function setLatitude(?string $latitude): static
+    {
+        $this->latitude = $latitude;
+
+        return $this;
+    }
+
+    public function getLongitude(): ?string
+    {
+        return $this->longitude;
+    }
+
+    public function setLongitude(?string $longitude): static
+    {
+        $this->longitude = $longitude;
 
         return $this;
     }

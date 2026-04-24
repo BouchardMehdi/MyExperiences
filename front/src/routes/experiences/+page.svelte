@@ -5,7 +5,9 @@
   import { onDestroy } from 'svelte';
   import { authSession } from '$lib/auth/session';
   import ExperienceCard from '$lib/components/ExperienceCard.svelte';
+  import ExperienceMap from '$lib/components/ExperienceMap.svelte';
   import { fetchExperiences } from '$lib/api/client';
+  import { calculateDistanceKm } from '$lib/utils/experience';
 
   /** @type {any[]} */
   let experiences = [];
@@ -16,6 +18,12 @@
   let location = '';
   let maxPrice = '';
   let date = '';
+  let isLocating = false;
+  let geolocationError = '';
+  /** @type {{ latitude: number; longitude: number } | null} */
+  let userLocation = null;
+  /** @type {number | null} */
+  let selectedExperienceId = null;
 
   /** @type {string | null} */
   let currentSearch = null;
@@ -103,10 +111,91 @@
     });
   }
 
+  async function useMyLocation() {
+    if (!navigator.geolocation) {
+      geolocationError = 'La geolocalisation n est pas disponible sur cet appareil.';
+      return;
+    }
+
+    isLocating = true;
+    geolocationError = '';
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        userLocation = {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude
+        };
+        isLocating = false;
+      },
+      () => {
+        geolocationError = 'Impossible de recuperer votre position. Verifiez les permissions du navigateur.';
+        isLocating = false;
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 300000
+      }
+    );
+  }
+
+  function clearMyLocation() {
+    userLocation = null;
+    geolocationError = '';
+  }
+
+  /**
+   * @param {CustomEvent<{ id: number }>} event
+   */
+  function handleMapSelect(event) {
+    selectedExperienceId = Number(event.detail.id);
+
+    if (typeof document === 'undefined') {
+      return;
+    }
+
+    const target = document.getElementById(`experience-card-${selectedExperienceId}`);
+    target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  /**
+   * @param {any} experience
+   * @returns {number | null}
+   */
+  function getExperienceDistance(experience) {
+    return calculateDistanceKm(userLocation, experience?.coordinates || null);
+  }
+
   $: activeFilterCount = [location, maxPrice, date].filter((value) => String(value || '').trim()).length;
   $: isFeaturedMode = activeFilterCount === 0;
-  $: displayedExperiences = isFeaturedMode ? experiences.slice(0, 9) : experiences;
+  $: baseDisplayedExperiences = isFeaturedMode ? experiences.slice(0, 9) : experiences;
+  $: displayedExperiences = [...baseDisplayedExperiences]
+    .map((experience) => {
+      const distanceKm = getExperienceDistance(experience);
+      return distanceKm == null ? experience : { ...experience, distanceKm };
+    })
+    .sort((left, right) => {
+      const leftDistance = typeof left.distanceKm === 'number' ? left.distanceKm : Number.POSITIVE_INFINITY;
+      const rightDistance = typeof right.distanceKm === 'number' ? right.distanceKm : Number.POSITIVE_INFINITY;
+      return leftDistance - rightDistance;
+    });
   $: displayedTotal = displayedExperiences.length;
+  $: mappedExperiences = displayedExperiences.filter(
+    (experience) =>
+      experience?.coordinates &&
+      Number.isFinite(Number(experience.coordinates.latitude)) &&
+      Number.isFinite(Number(experience.coordinates.longitude))
+  );
+  $: if (
+    mappedExperiences.length > 0 &&
+    !mappedExperiences.some((experience) => Number(experience.id) === Number(selectedExperienceId))
+  ) {
+    selectedExperienceId = Number(mappedExperiences[0].id);
+  }
+  $: if (mappedExperiences.length === 0) {
+    selectedExperienceId = null;
+  }
   $: ctaHref = $authSession.user ? `${base}/space` : `${base}/register`;
   $: ctaLabel = $authSession.user ? 'Ouvrir mon espace' : 'Creer un compte';
 </script>
@@ -183,6 +272,67 @@
   </p>
 </section>
 
+<section class="map-section">
+  <div class="map-head">
+    <div>
+      <span class="eyebrow soft">Carte</span>
+      <h2>Voir les experiences sur la carte</h2>
+      <p>
+        {#if userLocation}
+          La liste se base maintenant aussi sur votre position approximative pour remonter les plus proches.
+        {:else}
+          Activez votre position pour mieux reperer les experiences autour de vous.
+        {/if}
+      </p>
+    </div>
+
+    <div class="map-actions">
+      <button class="primary" disabled={isLocating} on:click={useMyLocation} type="button">
+        {isLocating ? 'Localisation...' : 'Utiliser ma position'}
+      </button>
+      {#if userLocation}
+        <button class="secondary" on:click={clearMyLocation} type="button">Retirer ma position</button>
+      {/if}
+    </div>
+  </div>
+
+  {#if geolocationError}
+    <p class="map-note error-note">{geolocationError}</p>
+  {/if}
+
+  <div class="map-layout">
+    <div class="map-panel">
+      {#if mappedExperiences.length > 0}
+        <ExperienceMap
+          experiences={mappedExperiences}
+          {userLocation}
+          {selectedExperienceId}
+          on:select={handleMapSelect}
+        />
+      {:else}
+        <div class="map-empty">
+          Aucune experience de cette selection ne possede encore de coordonnees exploitables.
+        </div>
+      {/if}
+    </div>
+
+    <aside class="map-aside">
+      <article>
+        <strong>{mappedExperiences.length}</strong>
+        <span>experience{mappedExperiences.length > 1 ? 's' : ''} sur la carte</span>
+      </article>
+      <article>
+        <strong>{userLocation ? 'Actif' : 'Inactif'}</strong>
+        <span>mode proximite</span>
+      </article>
+      <article>
+        <strong>{selectedExperienceId || 'Aucune'}</strong>
+        <span>experience ciblee</span>
+      </article>
+    </aside>
+  </div>
+</section>
+
 {#if isLoading}
   <section class="status-panel">Chargement des experiences...</section>
 {:else if error}
@@ -192,7 +342,15 @@
 {:else}
   <section class="grid">
     {#each displayedExperiences as experience (experience.id)}
-      <ExperienceCard {experience} />
+      <div
+        id={`experience-card-${experience.id}`}
+        role="presentation"
+        class:selected-card={selectedExperienceId === Number(experience.id)}
+        on:mouseenter={() => (selectedExperienceId = Number(experience.id))}
+        on:focusin={() => (selectedExperienceId = Number(experience.id))}
+      >
+        <ExperienceCard {experience} />
+      </div>
     {/each}
   </section>
 {/if}
@@ -200,6 +358,7 @@
 <style>
   .intro-panel,
   .filters-shell,
+  .map-section,
   .results-head,
   .status-panel {
     border-radius: 1.9rem;
@@ -231,6 +390,7 @@
   }
 
   .filters-shell,
+  .map-section,
   .results-head,
   .status-panel {
     padding: 1.25rem;
@@ -363,6 +523,79 @@
     margin: 1.1rem 0 1rem;
   }
 
+  .map-section {
+    display: grid;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .map-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: end;
+  }
+
+  .map-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .map-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.8fr) minmax(16rem, 0.75fr);
+    gap: 1rem;
+    align-items: stretch;
+  }
+
+  .map-panel {
+    min-height: 28rem;
+    border-radius: 1.6rem;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(143, 108, 82, 0.12);
+  }
+
+  .map-aside {
+    display: grid;
+    gap: 0.85rem;
+  }
+
+  .map-aside article,
+  .map-empty {
+    display: grid;
+    gap: 0.35rem;
+    padding: 1rem;
+    border-radius: 1.2rem;
+    background: rgba(255, 255, 255, 0.82);
+    border: 1px solid rgba(143, 108, 82, 0.12);
+  }
+
+  .map-aside strong {
+    font-size: 1.5rem;
+    color: #24160e;
+  }
+
+  .map-aside span {
+    color: #64564b;
+    line-height: 1.5;
+  }
+
+  .map-note {
+    margin: 0;
+    color: #5f5146;
+  }
+
+  .error-note {
+    color: #9c2f20;
+  }
+
+  .selected-card {
+    border-radius: 1.7rem;
+    box-shadow: 0 0 0 2px rgba(157, 92, 49, 0.18);
+  }
+
   .grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
@@ -382,13 +615,18 @@
   @media (max-width: 920px) {
     .intro-panel,
     .filters-head,
-    .results-head {
+    .results-head,
+    .map-head {
       flex-direction: column;
       align-items: start;
     }
 
     .filters-form {
       grid-template-columns: 1fr 1fr;
+    }
+
+    .map-layout {
+      grid-template-columns: 1fr;
     }
   }
 
