@@ -50,7 +50,27 @@ export async function apiFetch(path, options = {}) {
         ? payload.error.message
         : `API request failed with status ${response.status}`;
 
-    throw new Error(message);
+    const error = /** @type {Error & { fields?: Record<string, unknown>; code?: string; status?: number }} */ (
+      new Error(message)
+    );
+    if (
+      payload &&
+      typeof payload === 'object' &&
+      'error' in payload &&
+      payload.error &&
+      typeof payload.error === 'object'
+    ) {
+      if ('fields' in payload.error && payload.error.fields && typeof payload.error.fields === 'object') {
+        error.fields = payload.error.fields;
+      }
+
+      if ('code' in payload.error && typeof payload.error.code === 'string') {
+        error.code = payload.error.code;
+      }
+    }
+
+    error.status = response.status;
+    throw error;
   }
 
   /** @type {ApiPayload} */

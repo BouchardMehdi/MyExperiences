@@ -36,6 +36,8 @@
   let currentUser = null;
   let organizerRequestMessage = '';
   let organizerRequestError = '';
+  /** @type {Record<string, string[]>} */
+  let organizerRequestFieldErrors = {};
   let isSubmittingOrganizerRequest = false;
   let isLoadingAddressSuggestions = false;
   let addressSuggestionError = '';
@@ -153,6 +155,75 @@
       : [];
   }
 
+  /** @type {Record<string, string>} */
+  const organizerRequestFieldLabels = {
+    organizationName: 'Nom de structure',
+    phoneNumber: 'Telephone',
+    streetAddress: 'Adresse',
+    postalCode: 'Code postal',
+    city: 'Ville',
+    country: 'Pays',
+    businessType: 'Type de structure',
+    eventTypes: 'Types d evenements',
+    activityDescription: 'Description de l activite',
+    websiteUrl: 'Site web',
+    socialLinks: 'Reseaux sociaux',
+    siret: 'SIRET',
+    motivation: 'Motivation'
+  };
+
+  /**
+   * @param {unknown} exception
+   * @returns {Record<string, string[]>}
+   */
+  function extractFieldErrors(exception) {
+    if (
+      exception &&
+      typeof exception === 'object' &&
+      'fields' in exception &&
+      exception.fields &&
+      typeof exception.fields === 'object'
+    ) {
+      /** @type {Record<string, string[]>} */
+      const normalized = {};
+
+      for (const [field, messages] of Object.entries(exception.fields)) {
+        normalized[field] = Array.isArray(messages)
+          ? messages.map((message) => String(message))
+          : [String(messages)];
+      }
+
+      return normalized;
+    }
+
+    return {};
+  }
+
+  /**
+   * @param {string} field
+   */
+  function getFieldError(field) {
+    return organizerRequestFieldErrors[field]?.[0] || '';
+  }
+
+  /**
+   * @param {Record<string, string[]>} fieldErrors
+   */
+  function formatFieldErrors(fieldErrors) {
+    const entries = Object.entries(fieldErrors);
+
+    if (entries.length === 0) {
+      return '';
+    }
+
+    return entries
+      .map(([field, messages]) => {
+        const label = organizerRequestFieldLabels[field] || field;
+        return `${label} : ${messages.join(' ')}`;
+      })
+      .join(' ');
+  }
+
   $: streetAddressQuery = organizerForm.streetAddress.trim();
   $: if (streetAddressQuery.length < 3) {
     addressSuggestions = [];
@@ -258,6 +329,7 @@
     isSubmittingOrganizerRequest = true;
     organizerRequestError = '';
     organizerRequestMessage = '';
+    organizerRequestFieldErrors = {};
 
     try {
       const response = await requestOrganizerAccess(token, organizerForm);
@@ -284,7 +356,10 @@
         organizerRequestMessage = 'Votre demande organisateur a bien ete envoyee.';
       }
     } catch (exception) {
-      organizerRequestError = exception instanceof Error ? exception.message : 'Erreur inconnue.';
+      organizerRequestFieldErrors = extractFieldErrors(exception);
+      organizerRequestError =
+        formatFieldErrors(organizerRequestFieldErrors) ||
+        (exception instanceof Error ? exception.message : 'Erreur inconnue.');
     } finally {
       isSubmittingOrganizerRequest = false;
     }
@@ -393,17 +468,26 @@
           <label>
             <span>Nom de structure ou nom public</span>
             <input bind:value={organizerForm.organizationName} type="text" />
+            {#if getFieldError('organizationName')}
+              <small class="field-error">{getFieldError('organizationName')}</small>
+            {/if}
           </label>
 
           <label>
             <span>Telephone</span>
             <input bind:value={organizerForm.phoneNumber} type="tel" />
+            {#if getFieldError('phoneNumber')}
+              <small class="field-error">{getFieldError('phoneNumber')}</small>
+            {/if}
           </label>
 
           <label>
             <span>SIRET</span>
             <input bind:value={organizerForm.siret} inputmode="numeric" maxlength="14" type="text" />
             <small>Verification automatique dans la base officielle des entreprises diffusibles.</small>
+            {#if getFieldError('siret')}
+              <small class="field-error">{getFieldError('siret')}</small>
+            {/if}
           </label>
 
           <label>
@@ -413,12 +497,18 @@
                 <option value={option.value}>{option.label}</option>
               {/each}
             </select>
+            {#if getFieldError('businessType')}
+              <small class="field-error">{getFieldError('businessType')}</small>
+            {/if}
           </label>
 
           <label class="full-width">
             <span>Adresse</span>
             <input bind:value={organizerForm.streetAddress} type="text" />
             <small>Suggestion automatique via le referentiel public d adresses francais.</small>
+            {#if getFieldError('streetAddress')}
+              <small class="field-error">{getFieldError('streetAddress')}</small>
+            {/if}
 
             {#if isLoadingAddressSuggestions}
               <div class="suggestion-box muted">Recherche d adresses...</div>
@@ -443,26 +533,41 @@
           <label>
             <span>Code postal</span>
             <input bind:value={organizerForm.postalCode} type="text" />
+            {#if getFieldError('postalCode')}
+              <small class="field-error">{getFieldError('postalCode')}</small>
+            {/if}
           </label>
 
           <label>
             <span>Ville</span>
             <input bind:value={organizerForm.city} type="text" />
+            {#if getFieldError('city')}
+              <small class="field-error">{getFieldError('city')}</small>
+            {/if}
           </label>
 
           <label>
             <span>Pays</span>
             <input bind:value={organizerForm.country} type="text" />
+            {#if getFieldError('country')}
+              <small class="field-error">{getFieldError('country')}</small>
+            {/if}
           </label>
 
           <label>
             <span>Site web</span>
             <input bind:value={organizerForm.websiteUrl} placeholder="https://..." type="url" />
+            {#if getFieldError('websiteUrl')}
+              <small class="field-error">{getFieldError('websiteUrl')}</small>
+            {/if}
           </label>
 
           <label class="full-width">
             <span>Reseaux sociaux ou liens utiles</span>
             <input bind:value={organizerForm.socialLinks} placeholder="@instagram, LinkedIn, page Facebook..." type="text" />
+            {#if getFieldError('socialLinks')}
+              <small class="field-error">{getFieldError('socialLinks')}</small>
+            {/if}
           </label>
 
           <fieldset class="full-width checkbox-group">
@@ -479,16 +584,25 @@
                 </label>
               {/each}
             </div>
+            {#if getFieldError('eventTypes')}
+              <small class="field-error">{getFieldError('eventTypes')}</small>
+            {/if}
           </fieldset>
 
           <label class="full-width">
             <span>Description de l activite</span>
             <textarea bind:value={organizerForm.activityDescription} rows="5"></textarea>
+            {#if getFieldError('activityDescription')}
+              <small class="field-error">{getFieldError('activityDescription')}</small>
+            {/if}
           </label>
 
           <label class="full-width">
             <span>Motivation</span>
             <textarea bind:value={organizerForm.motivation} rows="5"></textarea>
+            {#if getFieldError('motivation')}
+              <small class="field-error">{getFieldError('motivation')}</small>
+            {/if}
           </label>
 
           <button class="primary-action full-width submit-button" disabled={isSubmittingOrganizerRequest} type="submit">
@@ -632,6 +746,11 @@
   small {
     color: #7a6555;
     line-height: 1.45;
+  }
+
+  .field-error {
+    color: #9c2f20;
+    font-weight: 700;
   }
 
   .full-width {
