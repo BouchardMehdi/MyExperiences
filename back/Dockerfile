@@ -24,4 +24,4 @@ COPY docker/php/app.ini /usr/local/etc/php/conf.d/app.ini
 
 EXPOSE 80
 
-CMD ["sh", "-c", "php bin/console doctrine:migrations:migrate --no-interaction && php-fpm -D && nginx -g 'daemon off;'"]
+CMD ["sh", "-c", "php bin/console doctrine:migrations:migrate --no-interaction && chown -R www-data:www-data /var/www/app/var && php-fpm -D && nginx -g 'daemon off;'"]

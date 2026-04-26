@@ -1,5 +1,7 @@
 import adapter from '@sveltejs/adapter-static';
 
+const publicBasePath = process.env.PUBLIC_BASE_PATH || '';
+
 const config = {
   kit: {
     adapter: adapter({
@@ -8,7 +10,7 @@ const config = {
       fallback: 'index.html'
     }),
     paths: {
-      base: '/MyExperiences'
+      base: publicBasePath
     },
     prerender: {
       handleHttpError: 'warn'

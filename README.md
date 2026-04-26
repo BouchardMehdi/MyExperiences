@@ -1,15 +1,16 @@
 # MyExperiences
 
-Base reusable full-stack pour un projet deploye sous sous-chemin avec :
+MyExperiences est une base full-stack pour un petit produit de reservation d'experiences :
 
-- `front/` : SvelteKit statique servi par Nginx
+- `front/` : SvelteKit/Vite, build statique servi par Nginx
 - `back/` : Symfony API + Doctrine + PostgreSQL
-- `docker-compose.yml` : orchestration production-ready pour VPS
+- `docker-compose.yml` : orchestration Docker pour production VPS
 
-Le projet est prevu pour etre expose sous :
+En production, l'application est prevue pour :
 
-- frontend : `/MyExperiences/`
-- backend : `/MyExperiences/api/`
+- frontend : `/`
+- API backend : `/api/`
+- domaine : `https://experiences.bouchard-mehdi.fr`
 
 ## Structure
 
@@ -18,108 +19,94 @@ MyExperiences/
 ├── front/
 ├── back/
 ├── docker-compose.yml
-├── .gitignore
+├── .env.example
 ├── README.md
 └── deploy.md
 ```
 
-## Frontend
+## Lancement avec Docker
 
-Le frontend utilise SvelteKit avec un build statique et :
-
-- `paths.base = "/MyExperiences"`
-- une fonction API centralisee dans `front/src/lib/api/client.js`
-- aucun `localhost` en dur dans le code applicatif
-- un conteneur Nginx qui sert le build et peut proxyfier `/MyExperiences/api/` vers le backend
-
-## Backend
-
-Le backend Symfony est organise dans `back/` et expose actuellement :
-
-- `GET /api/health`
-- `GET /api/hello`
-- `GET /api/experiences`
-- `GET /api/experiences/{id}`
-- `POST /api/experiences/{id}/reviews`
-- `POST /api/auth/register`
-- `POST /api/auth/login`
-- `POST /api/auth/logout`
-- `GET /api/me`
-- `GET /api/bookings`
-- `POST /api/bookings`
-- `POST /api/bookings/{id}/cancel`
-- `POST /api/bookings/{id}/pay`
-- `POST /api/organizer-requests`
-- `GET /api/organizer/dashboard`
-- `GET /api/organizer/experiences`
-- `POST /api/organizer/experiences`
-- `PATCH /api/organizer/experiences/{id}`
-- `DELETE /api/organizer/experiences/{id}`
-- `POST /api/organizer/experiences/{id}/slots`
-- `PATCH /api/organizer/slots/{id}`
-- `DELETE /api/organizer/slots/{id}`
-- `GET /api/organizer/bookings`
-- `GET /api/admin/dashboard`
-- `PATCH /api/admin/users/{id}`
-- `PATCH /api/admin/experiences/{id}`
-- `DELETE /api/admin/experiences/{id}`
-- `DELETE /api/admin/reviews/{id}`
-- `POST /api/admin/organizer-requests/{id}/approve`
-- `POST /api/admin/organizer-requests/{id}/reject`
-
-La base Doctrine/PostgreSQL est prete pour evoluer avec migrations et logique metier. La couche web Twig obsolete a ete retiree pour garder un backend API-first plus propre.
-
-## Lancement local avec Docker
-
-Depuis la racine du projet :
+Depuis la racine :
 
 ```bash
+cp .env.example .env
 docker compose up -d --build
 ```
 
 Services exposes localement :
 
-- frontend : `127.0.0.1:4100`
-- backend : `127.0.0.1:4200`
-- database : non exposee publiquement
+- frontend : `http://127.0.0.1:8083`
+- backend : `http://127.0.0.1:3002/api/health`
+- database : interne au reseau Docker
 
-Exemples utiles :
+Le frontend appelle l'API via `/api`, sans `localhost` hardcode en production.
 
-- `http://127.0.0.1:4100/MyExperiences/`
-- `http://127.0.0.1:4200/api/health`
+## Variables principales
 
-## Variables d'environnement
+Le fichier `.env` racine est utilise par Docker Compose :
 
-Le backend lit principalement :
+```env
+APP_ENV=prod
+APP_DEBUG=0
+APP_SECRET=change_me_replace_with_a_long_random_secret
 
-- `APP_ENV`
-- `APP_SECRET`
-- `DATABASE_URL`
+POSTGRES_DB=myexperiences
+POSTGRES_USER=myexperiences
+POSTGRES_PASSWORD=change_me_replace_with_a_strong_database_password
 
-Le service PostgreSQL utilise :
+PUBLIC_BASE_PATH=
+PUBLIC_API_BASE=/api
+```
 
-- `POSTGRES_DB`
-- `POSTGRES_USER`
-- `POSTGRES_PASSWORD`
+Les vrais fichiers `.env` ne doivent pas etre versionnes. Des exemples sont fournis :
 
-Un exemple backend est fourni dans `back/.env.example`.
+- `.env.example`
+- `back/.env.example`
+- `front/.env.example`
+
+## Endpoints API principaux
+
+- `GET /api/health`
+- `GET /api/hello`
+- `GET /api/experiences`
+- `GET /api/experiences/{id}`
+- `POST /api/auth/register`
+- `POST /api/auth/login`
+- `GET /api/me`
+- `GET /api/bookings`
+- `POST /api/bookings`
+- `POST /api/bookings/{id}/pay`
+- `GET /api/organizer/dashboard`
+- `GET /api/admin/dashboard`
 
 ## Commandes utiles
 
-Backend :
+Voir les logs :
 
 ```bash
-docker compose exec backend php bin/console doctrine:migrations:migrate
-docker compose exec backend php bin/console doctrine:database:create --if-not-exists
-docker compose exec backend php bin/console cache:clear
+docker compose logs -f frontend
+docker compose logs -f backend
+docker compose logs -f database
 ```
 
-Frontend :
+Lancer les migrations manuellement :
 
 ```bash
-docker compose exec frontend nginx -t
+docker compose exec backend php bin/console doctrine:migrations:migrate --no-interaction
 ```
 
-## Deploiement
+Verifier l'etat :
 
-Le detail du deploiement VPS, la configuration Nginx reverse proxy et les chemins sous `/MyExperiences/` sont documentes dans [deploy.md](deploy.md).
+```bash
+docker compose ps
+```
+
+Arreter :
+
+```bash
+docker compose down
+```
+
+## Deploiement VPS
+
+Le deploiement complet avec Docker, Nginx reverse proxy et Certbot est documente dans [deploy.md](deploy.md).

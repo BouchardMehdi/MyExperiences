@@ -1,6 +1,7 @@
 import { base } from '$app/paths';
 
-const API_ROOT = `${base}/api`;
+const configuredApiBase = import.meta.env.PUBLIC_API_BASE || `${base}/api`;
+const API_ROOT = configuredApiBase.endsWith('/') ? configuredApiBase.slice(0, -1) : configuredApiBase;
 
 /**
  * @typedef {Record<string, unknown>} ApiPayload

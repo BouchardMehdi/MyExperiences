@@ -2,6 +2,11 @@ FROM node:22-alpine AS build
 
 WORKDIR /app
 
+ARG PUBLIC_BASE_PATH=""
+ARG PUBLIC_API_BASE="/api"
+ENV PUBLIC_BASE_PATH=${PUBLIC_BASE_PATH}
+ENV PUBLIC_API_BASE=${PUBLIC_API_BASE}
+
 COPY package.json package-lock.json* ./
 RUN npm ci
 

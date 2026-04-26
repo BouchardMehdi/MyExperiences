@@ -2,10 +2,13 @@ services:
   frontend:
     build:
       context: ./front
+      args:
+        PUBLIC_BASE_PATH: ${PUBLIC_BASE_PATH:-}
+        PUBLIC_API_BASE: ${PUBLIC_API_BASE:-/api}
     depends_on:
       - backend
     ports:
-      - "127.0.0.1:4100:80"
+      - "127.0.0.1:8083:80"
     restart: unless-stopped
 
   backend:
@@ -15,11 +18,12 @@ services:
       database:
         condition: service_healthy
     environment:
-      APP_ENV: prod
+      APP_ENV: ${APP_ENV:-prod}
+      APP_DEBUG: ${APP_DEBUG:-0}
       APP_SECRET: ${APP_SECRET:-change_me}
       DATABASE_URL: postgresql://${POSTGRES_USER:-myexperiences}:${POSTGRES_PASSWORD:-myexperiences}@database:5432/${POSTGRES_DB:-myexperiences}?serverVersion=16&charset=utf8
     ports:
-      - "127.0.0.1:4200:80"
+      - "127.0.0.1:3002:80"
     restart: unless-stopped
 
   database:
