@@ -25,8 +25,8 @@ security:
 
     access_control:
         - { path: ^/api/admin, roles: ROLE_ADMIN }
-        - { path: ^/api/organizer, roles: ROLE_ORGANIZER }
         - { path: ^/api/organizer-requests, roles: ROLE_USER }
+        - { path: ^/api/organizer(?:/|$), roles: ROLE_ORGANIZER }
         - { path: ^/api/experiences/\d+/reviews$, roles: ROLE_USER }
         - { path: ^/api/me$, roles: ROLE_USER }
         - { path: ^/api/auth/logout$, roles: ROLE_USER }
