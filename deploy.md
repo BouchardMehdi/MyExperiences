@@ -246,13 +246,25 @@ Attention : `docker compose down -v` supprime le volume PostgreSQL et donc les d
 
 ## 10. Comptes de test crees par les migrations
 
-Mot de passe pour tous ces comptes :
+Les migrations creent automatiquement un jeu de donnees portfolio volumineux avec comptes, organisateurs, experiences, creneaux, reservations, paiements mock et avis.
+
+Comptes principaux a donner a un recruteur :
 
 ```text
-password
+Admin
+Email : portfolio.admin@myexperiences.test
+Mot de passe : Mxp-Admin!2026-Portfolio
+
+Organisateur
+Email : portfolio.organizer@myexperiences.test
+Mot de passe : Mxp-Organizer!2026-Portfolio
 ```
 
-Comptes disponibles :
+Anciens comptes de test encore disponibles :
+
+```text
+Mot de passe : password
+```
 
 ```text
 admin@myexperiences.test

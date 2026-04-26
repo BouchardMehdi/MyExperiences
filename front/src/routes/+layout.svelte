@@ -96,7 +96,9 @@
 
   <header class="site-header">
     <a class="brand" href={homeHref}>
-      <span class="brand-mark">ME</span>
+      <span class="brand-mark" aria-hidden="true">
+        <img src={`${base}/favicon.svg`} alt="" />
+      </span>
       <span class="brand-copy">
         <strong>MyExperiences</strong>
         <small>Experiences reservees, moments a raconter</small>
@@ -255,11 +257,14 @@
     width: 3rem;
     height: 3rem;
     border-radius: 1rem;
-    background: linear-gradient(135deg, var(--accent-dark), #d27b42);
-    color: #fffaf4;
-    font-weight: 800;
-    letter-spacing: 0.08em;
     box-shadow: 0 14px 28px rgba(138, 63, 37, 0.24);
+    overflow: hidden;
+  }
+
+  .brand-mark img {
+    display: block;
+    width: 100%;
+    height: 100%;
   }
 
   .brand-copy {

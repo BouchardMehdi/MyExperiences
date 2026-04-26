@@ -45,6 +45,7 @@ pnpm-debug.log*
 /back/public/bundles/
 /back/var/
 /back/vendor/
+/back/migrations/
 
 # Local archives / temp files
 *.tmp
