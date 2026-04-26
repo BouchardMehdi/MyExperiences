@@ -65,6 +65,7 @@ Exemple de valeurs de production :
 APP_ENV=prod
 APP_DEBUG=0
 APP_SECRET=replace_with_a_long_random_secret
+DEFAULT_URI=https://experiences.bouchard-mehdi.fr
 
 POSTGRES_DB=myexperiences
 POSTGRES_USER=myexperiences

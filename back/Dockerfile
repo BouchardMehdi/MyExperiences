@@ -9,6 +9,10 @@ COPY --from=composer /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/app
 
+ENV APP_ENV=prod
+ENV APP_DEBUG=0
+ENV APP_RUNTIME_OPTIONS='{"disable_dotenv":true}'
+
 COPY composer.json composer.lock symfony.lock* ./
 RUN composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader --no-scripts
 

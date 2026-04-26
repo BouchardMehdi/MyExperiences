@@ -20,7 +20,9 @@ services:
     environment:
       APP_ENV: ${APP_ENV:-prod}
       APP_DEBUG: ${APP_DEBUG:-0}
+      APP_RUNTIME_OPTIONS: '{"disable_dotenv":true}'
       APP_SECRET: ${APP_SECRET:-change_me}
+      DEFAULT_URI: ${DEFAULT_URI:-https://experiences.bouchard-mehdi.fr}
       DATABASE_URL: postgresql://${POSTGRES_USER:-myexperiences}:${POSTGRES_PASSWORD:-myexperiences}@database:5432/${POSTGRES_DB:-myexperiences}?serverVersion=16&charset=utf8
     ports:
       - "127.0.0.1:3002:80"

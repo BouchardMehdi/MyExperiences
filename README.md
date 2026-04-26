@@ -217,6 +217,7 @@ Exemple :
 APP_ENV=prod
 APP_DEBUG=0
 APP_SECRET=change_me_replace_with_a_long_random_secret
+DEFAULT_URI=https://experiences.bouchard-mehdi.fr
 
 POSTGRES_DB=myexperiences
 POSTGRES_USER=myexperiences
@@ -378,7 +379,7 @@ sudo certbot --nginx -d experiences.bouchard-mehdi.fr
 
 - Ne pas exposer PostgreSQL publiquement.
 - Garder les ports Docker limites a `127.0.0.1`.
-- Modifier `APP_SECRET` et `POSTGRES_PASSWORD` en production.
+- Modifier `APP_SECRET`, `DEFAULT_URI` et `POSTGRES_PASSWORD` en production.
 - Ne jamais versionner les vrais fichiers `.env`.
 - Les migrations sont lancees automatiquement au demarrage du backend Docker.
 - Le projet est concu comme projet portfolio, avec donnees seed pour faciliter la demonstration.
